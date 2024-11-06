@@ -1,10 +1,10 @@
 
-# Football Prediction Shiny App
+# FixtureIO Predictions App
 
 This Shiny app provides predictions for upcoming football matches, allowing users to explore match probabilities and view "fair odds" based on the predicted outcomes.
 
 The app:
-https://sportsbote.shinyapps.io/sportsbote2
+https://sportsbote.shinyapps.io/fixtureio
 
 
 ## Features
