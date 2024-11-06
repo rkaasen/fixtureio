@@ -1,0 +1,3 @@
+cmd:
+cd to folder
+venv\Scripts\activate
