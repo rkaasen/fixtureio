@@ -62,6 +62,7 @@ team_select_Server <- function(id, r6) {
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # CONTROLS ON SIDE BAR
     observeEvent(input$league_select_buttons, {
+      
       # set the selected league in the r6
       r6$selected_league <- input$league_select
       # update the dataset to be used:
@@ -192,6 +193,9 @@ team_select_Server <- function(id, r6) {
         r6$selected_away_team <- split[[1]][2]
         r6$data$match_date    <- split[[1]][3]
         r6$data$match_time    <- split[[1]][4]
+        
+        r6$selected_home_team_short = r6$team_list$league %>% filter(Team == split[[1]][1]) %>% pull(Team_short)
+        r6$selected_away_team_short = r6$team_list$league %>% filter(Team == split[[1]][2]) %>% pull(Team_short)
         
         trigger("button_to_estimation")
       }

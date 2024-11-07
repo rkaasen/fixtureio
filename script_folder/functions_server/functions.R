@@ -1204,5 +1204,113 @@ f_last_10_table <- function(df, team) {
 
 
 
+f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home", "Draw", "Away")) {
+  
+  # Define team data with fixed ordering and labels
+  # REVERSE LISTS:
+  labels <- factor(c(list_labels[3], list_labels[2], list_labels[1]), levels = c(list_labels[3], list_labels[2], list_labels[1]))  # Fixed order
+  values <- c(list_n_bets[3], list_n_bets[2], list_n_bets[1])  # Corresponding values for each team
+  
+  total_bets <- sum(values)
+  
+  if(values[1] > values[3]){
+    color_vec = c("#14499F", "#8A8A8A", "#98AFD3")
+  } else{
+    color_vec = c("#98AFD3", "#8A8A8A", "#14499F")
+  }
+  
+  # Create the plot
+  p <- plot_ly(
+    labels = labels,
+    values = values,
+    type = 'pie',
+    sort = FALSE,                    # Disable automatic sorting by values
+    direction = "clockwise",         # Clockwise order
+    textinfo = 'label+percent', 
+    hoverinfo = 'value+percent',
+    # hoverinfo = 'text',              
+    # text = ~paste('</br> Bets: ', values,
+                  # '</br>', round(values / total_bets * 100, 1), '%'), 
+    marker = list(
+      colors = color_vec, # Colors for each segment
+      line = list(color = "white", width = 2)       # White borders between segments
+    ),
+    textfont = list(
+      size = 22,
+      color = "white",
+      family = "Ahronbdgg",
+      bold = TRUE
+    )
+  ) %>%
+    layout(
+      title = list(
+        text = paste("<b>Total bets on game:</b><br><span style='font-size:36px;'>", total_bets, "</span>"),
+        x = 0.54,
+        y = 1.27,  # Increase this value to add more space above the pie chart
+        font = list(family = "Ahronbdgg", size = 20) # Font for "Total bets on game" text
+      ),
+      
+      margin = list(t = 80, b = 0), # Increase top margin for more space
+      showlegend = FALSE,             # Hide the legend
+      paper_bgcolor = 'rgba(0, 0, 0, 0)', # Transparent background
+      plot_bgcolor = 'rgba(0, 0, 0, 0)'   # Transparent plot background
+
+    ) %>%
+    style(
+      hoverlabel = list(
+        bgcolor = color_vec, # Hover background color per segment
+        bordercolor = "white",
+        font = list(size = 20, family = "Ahronbdgg", bold = TRUE)
+      )
+    ) %>% 
+    config(displayModeBar = FALSE)  # Hide the mode bar
+  
+  return(p)
+}
+
+
+f_your_bets_table <- function(df_use){
+  
+  r <- reactable(df_use, 
+            columns = list(
+              Bet = colDef(minWidth = 250, align = "left", style = list(fontSize = "20px"), vAlign = "center"),
+              
+              Odds = colDef(minWidth = 85, align = "center", style = list(fontSize = "28px"), vAlign = "center"),
+              Placed = colDef(minWidth = 200, align = "center", style = list(fontSize = "20px"), vAlign = "center"),
+              
+              id = colDef(
+                name = "Cancel",
+                sortable = FALSE, vAlign = "center", align = "center",
+                cell = function() htmltools::tags$button(class = "odds-button-worse", "Cancel", style = "font-size: 18px;")
+              )
+            ),
+            
+            # Default stuff
+            pagination = FALSE, sortable = FALSE, fullWidth = FALSE,
+            onClick = JS("function(rowInfo, column) {
+                    // Only handle click events on the 'details' column
+                    if (column.id !== 'id') {
+                      return
+                    }
+
+                    if (window.Shiny) {
+                      Shiny.setInputValue('top_of_estimation_tab-card_module-cancel', rowInfo.values['id'], { priority: 'event' })
+                    }
+                  }"),
+            
+            class = "selection_table",
+            
+            theme = reactableTheme(
+              backgroundColor = "transparent"
+            )
+  )
+  
+  return(r)
+  
+}
+
+
+
+
 
 

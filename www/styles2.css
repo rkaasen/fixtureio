@@ -2,18 +2,22 @@
 
 
 @font-face {
-    font-family: 'Ahronbd';
+    font-family: 'Ahronbdgg';
     src: url('ahronbd.ttf') format('truetype');
 }
 
 body {
-    font-family: 'Ahronbd', sans-serif;
+    font-family: 'Ahronbdgg', sans-serif;
     font-size: 14px;
 }
 
 
 .container-fluid {
         padding: 0;
+}
+
+.js-plotly-plot .plotly .main-svg, .js-plotly-plot .plotly text {
+        font-family: 'Ahronbdgg' !important;
 }
 
 
@@ -116,10 +120,11 @@ body {
   background-color: #F2F2F2;
   color: #404040;
   border: none;
-  padding: 3px 7px;
+  padding: 5px 10px;
   cursor: pointer;
   border-radius: 4px;
   border: 1px solid #404040; 
+  align-items: center;
 }
 
 .reactable-button:hover {
@@ -173,6 +178,26 @@ body {
 }
 .odds-button-worse:hover {
   background-color: #e22020;
+  color: white;
+}
+
+
+.odds-button-place-bet {
+  background-color: white;
+  border: 2px solid #4CAF50;
+  color: #4CAF50;
+  font-weight: bold;
+  padding-top: 5px;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-bottom: 0px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 24px;
+}
+.odds-button-place-bet:hover {
+  background-color: #4CAF50;
   color: white;
 }
 
@@ -406,27 +431,33 @@ background-color: #4CAF50;
 /* fixing reactable table */
 
 
-    /* Apply background color and styles to all header cells */
-    .reactable .rt-th {
-      background-color: #98AFD3 !important;
-      color: black !important;
-      font-weight: bold !important;
-      font-size: 18px !important;
-      border: 2px solid #98AFD3 !important; /* Same color as background for seamless look */
-      padding: 10px !important;
-    }
+/* Apply background color and styles to all header cells */
 
-    /* Apply border radius only to the first and last header cells */
-    .reactable .rt-th:first-child {
-      border-top-left-radius: 8px !important;
-      border-bottom-left-radius: 8px !important;
-    }
-    .reactable .rt-th:last-child {
-      border-top-right-radius: 8px !important;
-      border-bottom-right-radius: 8px !important;
-    }
+/*
+.selection_table .custom_table_10_matches .rt-th {
+  background-color: #98AFD3 !important;
+  color: black !important;
+  font-weight: bold !important;
+  font-size: 18px !important;
+  border: 2px solid #98AFD3 !important; 
+  padding: 10px !important;
+}
 
-    /* Apply custom padding with higher specificity to all rows but not the header */
+*/
+
+/* Apply border radius only to the first and last header cells */
+.custom_table_10_matches .rt-th:first-child,
+.selection_table .rt-th:first-child{
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+.custom_table_10_matches .rt-th:last-child,
+.selection_table .rt-th:last-child{
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+/* Apply custom padding with higher specificity to all rows but not the header */
 .custom_table_10_matches .rt-tbody .rt-td .rt-td-inner {
   padding: 4px 6px !important;  /* Adjust these values as needed */
   overflow: hidden !important;
@@ -438,60 +469,76 @@ background-color: #4CAF50;
   padding: 0 !important;
 }
 
+/* Custom padding for header cells in reactable */
+.custom_table_10_matches .rt-thead .rt-th .rt-th-inner, 
+.selection_table .rt-thead .rt-th .rt-th-inner {
+  padding: 12px 4px !important;  /* Adjust these values as needed */
+  font-weight: bold;             /* Optional: make header text bold */
+  text-align: center;            /* Optional: center-align header text */
+}
+
 /* Make the overall reactable table container transparent */
-.reactable .rt-table {
+.custom_table_10_matches .rt-table,
+.selection_table .rt-table {
   background-color: transparent !important;
 }
 /* Make the table body rows and cells transparent */
-.reactable .rt-tbody .rt-tr-group, .reactable .rt-td {
+.custom_table_10_matches .rt-tbody .rt-tr-group, 
+.selection_table .rt-tbody .rt-tr-group, 
+.reactable .rt-td {
   background-color: transparent !important;
 }
 
 /* add borders */
 
-    /* Outer border with rounded corners for the table */
-    .reactable .rt-table {
-      border: 1px solid black !important;
-      border-radius: 8px !important; /* Adjust the radius for more or less rounding */
-      overflow: hidden; /* Ensures rounded corners are clean */
-    }
+/* Outer border with rounded corners for the table */
+.custom_table_10_matches .rt-table,
+.selection_table .rt-table {
+  border: 1px solid black !important;
+  border-radius: 8px !important; /* Adjust the radius for more or less rounding */
+  overflow: hidden; /* Ensures rounded corners are clean */
+}
 
-    /* Horizontal and vertical borders between cells in the body */
-    .reactable .rt-tbody .rt-tr-group {
-      border-top: 1px solid #14499F !important; /* Horizontal border between rows */
-    }
+/* Horizontal and vertical borders between cells in the body */
+.custom_table_10_matches .rt-tbody .rt-tr-group,
+.selection_table .rt-tbody .rt-tr-group {
+  border-top: 1px solid #14499F !important; /* Horizontal border between rows */
+}
+
+/* Remove the right border on the last cell in each row to avoid double borders */
+.custom_table_10_matches .rt-tr-group .rt-td:last-child,
+.selection_table .rt-tr-group .rt-td:last-child {
+  border-right: none !important;
+}
+
+/* Keep the header background color and remove header cell borders */
+.custom_table_10_matches .rt-th, 
+.selection_table .rt-th {
+  background-color: #14499F !important;
+  color: white !important;
+  font-weight: bold !important;
+  border: none !important;
+}
 
 
-    /* Remove the right border on the last cell in each row to avoid double borders */
-    .reactable .rt-tr-group .rt-td:last-child {
-      border-right: none !important;
-    }
-
-    /* Keep the header background color and remove header cell borders */
-    .reactable .rt-th {
-      background-color: #14499F !important;
-      color: white !important;
-      font-weight: bold !important;
-      border: none !important;
-    }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */ 
 /* Style the card for match data */ 
 
 /* Adjust the size of the card when in full-screen mode */
 .bslib-card[data-full-screen='true'] {
-  width: 60% !important;      /* Set the desired width */
-  height: 80% !important;      /* Set the desired height */
-  max-width: 60% !important;   /* Ensure max-width is restricted */
-  max-height: 80% !important;  /* Ensure max-height is restricted */
+  width: 80% !important;      /* Set the desired width */
+  height: 90% !important;      /* Set the desired height */
+  max-width: 80% !important;   /* Ensure max-width is restricted */
+  max-height: 90% !important;  /* Ensure max-height is restricted */
   margin: auto !important;     /* Center the card */
 }
 
 .bslib-full-screen-exit {
   position: relative;
-  top: 9.5%;           /* Adjust this to control vertical positioning */
+  top: 4.5%;           /* Adjust this to control vertical positioning */
   right: 0;            /* Aligns it to the right edge of its container */
-  margin-right: 20%;   /* Adjust this to control horizontal positioning */
+  margin-right: 10%;   /* Adjust this to control horizontal positioning */
   font-size: 0.9rem;
   cursor: pointer;
   text-decoration: none;
@@ -501,7 +548,7 @@ background-color: #4CAF50;
 }
           
           
-    /* Style the background color of the tab headers */
+/* Style the background color of the tab headers */
 .nav-tabs {
   background-color: #14499F;  /* Blue background color */
   height: 55px;

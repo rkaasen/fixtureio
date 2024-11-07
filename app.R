@@ -24,6 +24,9 @@ library(reactable.extras)
 
 library(bsicons)
 
+library(plotly)
+
+
 
 source("shh.R")
 

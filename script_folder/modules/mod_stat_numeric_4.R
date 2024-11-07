@@ -310,8 +310,8 @@ estimation_page_stats_numeric_Server <- function(id, r6,
             l_perc_results <- f_plot_winning_prediction_percent(Home_rank = home_team_df$rank, 
                                                                 Away_rank = away_team_df$rank, 
                                                                 range = (metrics_df$rank %>% max - metrics_df$rank %>% min), 
-                                                                Home_label = home_team_df$Team %>% as_tibble() %>% setNames("Team") %>% left_join(r6$team_list$league, by = c("Team")) %>% pull(Team_short), 
-                                                                Away_label = away_team_df$Team %>% as_tibble() %>% setNames("Team") %>% left_join(r6$team_list$league, by = c("Team")) %>% pull(Team_short),
+                                                                Home_label = r6$selected_home_team_short,
+                                                                Away_label = r6$selected_home_away_short,
                                                                 return_plot = F
                                                                 
             )
@@ -427,8 +427,8 @@ estimation_page_stats_numeric_Server <- function(id, r6,
       l_perc_results <- f_plot_winning_prediction_percent(Home_rank = home_team_df$rank, 
                                                           Away_rank = away_team_df$rank, 
                                                           range = (metrics_df$rank %>% max - metrics_df$rank %>% min), 
-                                                          Home_label = home_team_df$Team %>% as_tibble() %>% setNames("Team") %>% left_join(r6$team_list$league, by = c("Team")) %>% pull(Team_short), 
-                                                          Away_label = away_team_df$Team %>% as_tibble() %>% setNames("Team") %>% left_join(r6$team_list$league, by = c("Team")) %>% pull(Team_short)
+                                                          Home_label = r6$selected_home_team_short, 
+                                                          Away_label = r6$selected_away_team_short
                                                           
       )
       
