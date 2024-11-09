@@ -497,6 +497,42 @@ fetch_table_all_bets <- function(r6) {
 
 
 
+update_n_bets_in_db <- function(user_id, bets_df, bets_week_starting, match_id_input) {
+
+  bets_used <- bets_df %>% 
+    filter((is.na(bet_concluded))) %>% 
+    nrow()
+  
+  bets_available <- bets_week_starting - bets_used
+  
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # Parameterized SQL update query
+  sql <- "UPDATE users SET bets_available = $1 WHERE user_id = $2"
+  
+  # Execute the query
+  tryCatch({
+    dbExecute(con, sql, params = list(bets_available, user_id))
+    message("Bet availability updated successfully!")
+  }, error = function(e) {
+    message("Error updating bet availability: ", e$message)
+  })
+}
+
+
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # USE FUNCTIONS ----
@@ -1591,7 +1627,7 @@ f_all_bets_table <- function(r6){
                  )
   )
   
-
+  
   
   return(r)
   

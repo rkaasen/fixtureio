@@ -237,10 +237,8 @@ server <- function(input, output, session) {
   r6$user_info$user_id <- NULL
   r6$user_info$username <- NULL
   r6$user_info$bets <- NULL
-  
+  r6$user_info$bets_week_starting <- NULL
 
-  
-  
   
   r6$data$pl_historic <- raw_pl_data_all
   # r6$data$ll_historic <- read.csv("Data/SP1.csv") %>% as_tibble()

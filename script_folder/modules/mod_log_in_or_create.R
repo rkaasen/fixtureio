@@ -129,14 +129,15 @@ login_Server <- function(id, r6) {
         dbDisconnect(con)
       }, add = TRUE)
       
-      query <- "SELECT user_id, password_hash, username FROM users WHERE username = $1 AND is_active = TRUE"
+      query <- "SELECT user_id, password_hash, username, bets_week_starting FROM users WHERE username = $1 AND is_active = TRUE"
       user_data <- dbGetQuery(con, query, list(input$username))
       
       if (nrow(user_data) == 1 && bcrypt::checkpw(input$password, user_data$password_hash)) {
         r6$user_info$logged_in <- TRUE
         r6$user_info$user_id <- user_data$user_id
         r6$user_info$username <- user_data$username
-        
+        r6$user_info$bets_week_starting <- user_data$bets_week_starting
+
         r6$user_info$bets <- fetch_table_all_bets(r6)
         
         trigger("user_logged_in")

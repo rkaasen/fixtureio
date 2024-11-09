@@ -62,6 +62,7 @@ user_page_Server <- function(id, r6) {
       r6$user_info$user_id <- NULL
       r6$user_info$username <- NULL
       r6$user_info$bets <- NULL
+      r6$user_info$bets_week_starting <- NULL
       
       trigger("user_logged_out")
       

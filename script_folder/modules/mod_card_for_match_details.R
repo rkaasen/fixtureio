@@ -355,12 +355,14 @@ card_for_match_details_Server <- function(id, r6) {
     })
     
     
+    
     observeEvent(input$btn_place_bet, {
+      
+      match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
       
       # betting conditions
       active_bets_total <- r6$user_info$bets %>% filter(is.na(bet_concluded)) %>% nrow()
-      bets_on_match <- format_bets_for_match_bets(r6$user_info$bets,
-                                                  paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending))
+      bets_on_match <- format_bets_for_match_bets(r6$user_info$bets,match_id_chosen) %>% nrow()
       
       utc_time_now <- format(Sys.time(), tz = "UTC", usetz = TRUE)
       utc_time_schedule <- r6$data$pl_schedule %>% 
@@ -391,6 +393,8 @@ card_for_match_details_Server <- function(id, r6) {
                               user_id = r6$user_info$user_id)
         
         r6$user_info$bets <- fetch_table_all_bets(r6)
+        update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen)
+        
         
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
@@ -425,6 +429,7 @@ card_for_match_details_Server <- function(id, r6) {
         cancel_bet_in_db(bet_id = input$cancel)
         
         r6$user_info$bets <- fetch_table_all_bets(r6)
+        update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen)
         
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
