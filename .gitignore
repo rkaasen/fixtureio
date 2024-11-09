@@ -223,6 +223,8 @@ rsconnect/
 # CUSTOM
 
 shh.R
+shh2.R
+
 set_vars_test.R
 Remember
 Brainstorm/

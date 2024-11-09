@@ -17,6 +17,10 @@ library(toOrdinal)
 library(showtext)
 library(sysfonts)
 
+library(RPostgres)
+library(bcrypt)
+library(uuid)
+
 # library(cowplot)
 
 library(reactable)
@@ -25,6 +29,8 @@ library(reactable.extras)
 library(bsicons)
 
 library(plotly)
+
+
 
 
 
@@ -54,6 +60,10 @@ source("script_folder/modules/mod_the_data.R")
 source("script_folder/modules/mod_methodology.R")
 source("script_folder/modules/mod_authors.R")
 
+# estimation page:
+source("script_folder/modules/mod_log_in_or_create.R")
+source("script_folder/modules/mod_user_page.R")
+
 
 sysfonts::font_add( family = "Ahronbdgg", regular = "www/ahronbd.ttf")
 showtext::showtext_auto()
@@ -64,6 +74,10 @@ showtext::showtext_auto()
 ui <- function(request) {
 
   fluidPage(
+    
+    # Hidden div to help simulate focus release
+    tags$div(id = "hidden_fullscreen_toggle", style = "display: none;"),
+    
     title = "FixtureIO",
     
     theme = bs_theme(version = 5),  # Set the Bootstrap theme globally
@@ -91,7 +105,7 @@ ui <- function(request) {
 
       # HOME PANEL
       nav_panel(
-        title = "HOME",
+        title = icon("home"),
         value = "HOME",
         home_page_UI("home_page"),
       ),
@@ -135,13 +149,50 @@ ui <- function(request) {
         value = "HOW-IT-WORKS",
         how_it_works_UI("how_it_works")
       ),
-      nav_menu("ABOUT",  # This creates a dropdown menu
+      nav_menu(
+        title = icon("bars"),
+        value = "ABOUT",  # This creates a dropdown menu
                nav_panel("METHODOLOGY",value = "ABOUT/METHODOLOGY", br(), methodology_UI("methodology")),
                nav_panel("THE DATA", value = "ABOUT/THE-DATA", br(), the_data_UI("the_data")),
                nav_panel("AUTHORS", value = "ABOUT/AUTHORS", br(), authors_UI("authors"))
       ),
 
-
+      nav_panel(
+        title = icon("user"),
+        value = "USER_PAGE",
+        
+        # user
+        navbarPage(
+          useShinyjs(),
+          tags$head(
+            tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
+            tags$script(src = "custom.js")
+          ),
+          
+          tabsetPanel(
+            id = "tabset_user",
+            type = "hidden",  # Hides the tab headers
+            
+            # TAB 1
+            tabPanel(
+              "Log_in",
+              value = "LOG-IN",
+              login_UI("login_page"),
+              
+            ),
+            
+            # TAB 2:
+            tabPanel(
+              "User_page",
+              value = "USER-INFO",
+              user_page_UI("user_page"),
+              
+            ),
+          )
+        )
+        
+      )
+      
     ),# NAVSET
 
 
@@ -168,7 +219,7 @@ server <- function(input, output, session) {
   # Observe changes to the current tab to update URL and active tab
   observeEvent(input$current_tab, {
     # Ensure valid tab is selected and update the URL accordingly
-    if (!is.null(input$current_tab) && input$current_tab %in% c("HOME", "ANALYSIS", "HOW-IT-WORKS", "ABOUT/METHODOLOGY", "ABOUT/THE-DATA", "ABOUT/AUTHORS")) {
+    if (!is.null(input$current_tab) && input$current_tab %in% c("HOME", "ANALYSIS", "HOW-IT-WORKS", "ABOUT/METHODOLOGY", "ABOUT/THE-DATA", "ABOUT/AUTHORS", "USER-INFO", "LOG-IN")) {
       # Update URL without reloading the page
       new_url <- input$current_tab
       session$sendCustomMessage(type = 'updateURL', message = new_url)
@@ -179,10 +230,18 @@ server <- function(input, output, session) {
   }, ignoreInit = FALSE, ignoreNULL = FALSE)  # Ensure all changes are observed
 
 
-
-
   # INIT r6
   r6 = R6::R6Class()
+  
+  r6$user_info$logged_in <- FALSE
+  r6$user_info$user_id <- NULL
+  r6$user_info$username <- NULL
+  r6$user_info$bets <- NULL
+  
+
+  
+  
+  
   r6$data$pl_historic <- raw_pl_data_all
   # r6$data$ll_historic <- read.csv("Data/SP1.csv") %>% as_tibble()
 
@@ -193,10 +252,9 @@ server <- function(input, output, session) {
   # r6$team_list$ll_teams <- ll_teams
 
   r6$standings$`English Premier League` <- pl_standings_table
-  
   r6$chosen_stats_list_prev <- c()
   
-
+  
   # Initialize triggers
   init("button_to_estimation", "button_to_selection", "button_select_matchup")
   init("button_app", "button_HTU", "button_methodology", "button_data", "button_authors")
@@ -205,6 +263,7 @@ server <- function(input, output, session) {
   init("new_stats_chosen")
   init("full_screen_card_closed")
   init("open_analytics_card_home", "open_analytics_card", "open_analytics_card_away")
+  init("user_logged_in", "user_logged_out")
 
   # Read modules
   button_to_estimation_Server("button_on_selection_tab")
@@ -216,7 +275,9 @@ server <- function(input, output, session) {
   the_data_Server("the_data")
   methodology_Server("the_data")
   authors_Server("authors")
-
+  login_Server("login_page", r6)
+  user_page_Server("user_page", r6)
+  
   # Some code for navigating the app
   observeEvent(watch("button_to_estimation"), ignoreInit = T, {
     updateTabsetPanel(session, "tabset", selected = "Estimation")
@@ -226,6 +287,18 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabset", selected = "Matchup Select")
     shinyjs::runjs("window.scrollTo(0, 0)")
   })
+  
+  observeEvent(watch("user_logged_in"), ignoreInit = T, {
+    updateTabsetPanel(session, "tabset_user", selected = "USER-INFO")
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  })
+  observeEvent(watch("user_logged_out"), ignoreInit = T, {
+    updateTabsetPanel(session, "tabset_user", selected = "LOG-IN")
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  })
+  
+  
+  
 
   # navbar navigatoin:
   observeEvent(watch("button_app"), ignoreInit = T, {

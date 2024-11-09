@@ -578,6 +578,30 @@ color: black;              /* Hover text color */
 border-color: white;     /* Hover border color */
 border-width: 3px;
 border-radius: 0px;
+}
+
+
+/*  spnnier over the page */
+
+.full-page-spinner {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw; /* Full viewport width */
+  height: 100vh; /* Full viewport height */
+  background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white overlay */
+  z-index: 9999; /* Ensures it stays on top */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Spinner styling */
+.full-page-spinner img {
+  width: 100px; /* Adjust the size as needed */
+  animation: spin 1s linear infinite;
+}
 
 
 

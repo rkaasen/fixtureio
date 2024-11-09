@@ -4,6 +4,11 @@ card_for_match_details_UI <- function(id) {
   
   fluidRow(
     
+    hidden(
+      div(class = "full-page-spinner", tags$img(src = "spinner.gif"))
+    ),
+    
+    
     actionButton(inputId = NS(id, "external_toggle"), label = "Match Stats", class = "reactable-button"),
     
     hidden(
@@ -58,9 +63,9 @@ card_for_match_details_UI <- function(id) {
                                   ),
                                   column(1, offset = 0, align = "left",div(style = "height: 3px;"),
                                          
-                                         disabled(
+                                         # disabled(
                                          actionButton(NS(id,"bet_btn"), " BET " ,class = "reactable-button", width = "75%", style = "padding-top: 8px;" )
-                                         )
+                                         # )
                                   )
                                   
                                   
@@ -104,41 +109,39 @@ card_for_match_details_UI <- function(id) {
                                             plotlyOutput(NS(id,"pie_chart"))
                                      ),
                                      
-                                     column(7, align = "Left",
+                                     column(7, align = "Left", id = NS(id, "user_info"),
                                             class = "rounded-column",
                                             style = "background: linear-gradient(to bottom, #f7f7f7, #ececed); margin-left: 20px;",
                                             h3("Place Bet:"),
                                             hidden(
-   
-                                                     fluidRow(
-                                                       id = NS(id,"place_bet_row"),
-                                                       style = "display: flex;",
-                                                       column(6,
-                                                              h5("Game result:"),
-                                                              fluidRow(
-                                                                style = "display: flex; align-items: center;",  # Use flexbox for alignment
-                                                                div(style = "flex: 1; display: flex; align-items: flex-end;",  # This div will take all available space
-                                                                    h2(textOutput(NS(id, "odds_string")), 
-                                                                       style = 'color: #14499F; font-weight: bold; padding-right: 10px;'),
-                                                                    tags$h5(id = NS(id, "to_win_text"), " to win", style = ' padding-bottom: 5px;')
-                                                                ),
-                                                                
-                                                              )
-                                                       ),
-                                                       column(2,
-                                                              h5("Odds:", style = 'font-weight: bold; padding-bottom: 5px; margin-bottom: 0px;'), 
-                                                              h1(textOutput(NS(id,"odds_value")), style = 'font-weight: bold; color: #14499F; padding-top: 0px;')
-                                                       ),
-                                                       column(1, div(style = "height: 25px;"), align = "middle",
-                                                              actionButton(NS(id,"btn_place_bet"), label = icon("check-circle"), class = "odds-button-place-bet")
-                                                       ),
-                                                       column(1, div(style = "height: 25px;"), 
-                                                              actionButton(NS(id,"btn_cancel_bet"), "Cancel", class = "odds-button-worse")
-                                                       ),
-                                                       
-                                                     )
-                                                    
                                               
+                                              fluidRow(
+                                                id = NS(id,"place_bet_row"),
+                                                style = "display: flex;",
+                                                column(6,
+                                                       h5("Game result:"),
+                                                       fluidRow(
+                                                         style = "display: flex; align-items: center;",  # Use flexbox for alignment
+                                                         div(style = "flex: 1; display: flex; align-items: flex-end;",  # This div will take all available space
+                                                             h2(textOutput(NS(id, "odds_string")), 
+                                                                style = 'color: #14499F; font-weight: bold; padding-right: 10px;'),
+                                                             tags$h5(id = NS(id, "to_win_text"), " to win", style = ' padding-bottom: 5px;')
+                                                         ),
+                                                         
+                                                       )
+                                                ),
+                                                column(2,
+                                                       h5("Odds:", style = 'font-weight: bold; padding-bottom: 5px; margin-bottom: 0px;'), 
+                                                       h1(textOutput(NS(id,"odds_value")), style = 'font-weight: bold; color: #14499F; padding-top: 0px;')
+                                                ),
+                                                column(1, div(style = "height: 25px;"), align = "middle",
+                                                       actionButton(NS(id,"btn_place_bet"), label = icon("check-circle"), class = "odds-button-place-bet")
+                                                ),
+                                                column(1, div(style = "height: 25px;"), 
+                                                       actionButton(NS(id,"btn_cancel_bet"), "Cancel", class = "odds-button-worse")
+                                                ),
+                                                
+                                              )
                                               
                                             ),
                                             fluidRow(
@@ -152,14 +155,17 @@ card_for_match_details_UI <- function(id) {
                                             h3("Your bets on this match"),
                                             div(style = "height: 15px;"),
                                             reactableOutput( NS(id,"your_bets_table"))
+                                     ),
+                                     # hidden(
+                                     column(7, id = NS(id, "no_user_info"),
+                                            h3("Log in to use betting")
                                      )
-                                     
+                                     # )
                                    )
                          )
                        )
-                  )
+                  ),
               ),
-              
               # AWAY TEAM TAB
               nav(value = NS(id,"away_team_tab"),h4(textOutput(NS(id,"away_team"))), class = "my-gradient-background-white-start",
                   div( align = "center",
@@ -190,10 +196,6 @@ card_for_match_details_Server <- function(id, r6) {
     to_win <- reactiveVal(NULL)
     to_win_odds <- reactiveVal(NULL)
     
-    df_your_odds <- reactiveVal(NULL)
-    
-    id_to_remove <- reactiveVal(NULL)
-    
     #~~~~~~~~~~~~~~~~~
     # Module Server
     
@@ -201,19 +203,19 @@ card_for_match_details_Server <- function(id, r6) {
     
     # toggle the card:
     
-    observeEvent(list(input$external_toggle, watch("open_analytics_card")), {
+    observeEvent(list(input$external_toggle, watch("open_analytics_card")), ignoreInit = T, {
       shinyjs::show("card_div")
       nav_select(id = "tabs", selected = "top_of_estimation_tab-card_module-the_match_tab")
       session$sendCustomMessage("toggleCardFullscreen", session$ns("my_card"))
     })
     
-    observeEvent(watch("open_analytics_card_home"), {
+    observeEvent(watch("open_analytics_card_home"), ignoreInit = T,{
       shinyjs::show("card_div")
       nav_select(id = "tabs", selected = "top_of_estimation_tab-card_module-home_team_tab")
       session$sendCustomMessage("toggleCardFullscreen", session$ns("my_card"))
     })
     
-    observeEvent(watch("open_analytics_card_away"), {
+    observeEvent(watch("open_analytics_card_away"), ignoreInit = T,{
       shinyjs::show("card_div")
       nav_select(id = "tabs", selected = "top_of_estimation_tab-card_module-away_team_tab")
       session$sendCustomMessage("toggleCardFullscreen", session$ns("my_card"))
@@ -250,6 +252,15 @@ card_for_match_details_Server <- function(id, r6) {
       )
       
       shinyjs::hide("your_odds_row")
+      
+      if(r6$user_info$logged_in){
+        shinyjs::show("user_info")
+        shinyjs::hide("no_user_info")
+      } else {
+        shinyjs::hide("user_info")
+        shinyjs::show("no_user_info")
+      }
+      
       
     })
     
@@ -296,6 +307,14 @@ card_for_match_details_Server <- function(id, r6) {
         )
       })
       
+      if(r6$user_info$logged_in){
+        
+        output$your_bets_table <- renderReactable({
+          f_your_bets_table(r6)
+        })
+        
+      }
+      
     })
     
     observeEvent(input$btn_cancel_bet, {
@@ -338,55 +357,86 @@ card_for_match_details_Server <- function(id, r6) {
     
     observeEvent(input$btn_place_bet, {
       
+      # betting conditions
+      active_bets_total <- r6$user_info$bets %>% filter(is.na(bet_concluded)) %>% nrow()
+      bets_on_match <- format_bets_for_match_bets(r6$user_info$bets,
+                                                  paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending))
       
-      row_accepted <- tibble(
-        Bet = c(to_win()),
-        Odds = c(round(to_win_odds(),2)),
-        Placed = format(now(), "%Y-%m-%d %H:%M"),
-        id = paste0(now(),"_", to_win(), "_", round(to_win_odds(),2)),
-        cancelled = F
-      )
+      utc_time_now <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+      utc_time_schedule <- r6$data$pl_schedule %>% 
+        filter(
+          HomeTeam == r6$selected_home_team,
+          AwayTeam == r6$selected_away_team
+        ) %>% 
+        pull(utc_date)
       
-      if(is.null(df_your_odds())){  
+      
+      if( bets_on_match >2 ){
+        showNotification("Max number of bets per match is 3", type = "error", duration = 5)
+      } 
+      # else if(active_bets_total > 9 ) {
+      #   showNotification("Max number of total bets is 10", type = "error", duration = 5)
+      # } 
+      else if (utc_time_now > utc_time_schedule){
+        showNotification("Game already started", type = "error", duration = 5)
+      }
+      else {
         
-        df_update <- row_accepted
+        shinyjs::show(selector = ".full-page-spinner") 
         
-      } else{
         
-        df_update <- 
-          rbind(
-            row_accepted,
-            df_your_odds()
-          ) %>% 
-          arrange(Placed)
+        write_data_to_db_bets(bet = to_win(), 
+                              odds = round(to_win_odds(),2), 
+                              match_id = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending), 
+                              user_id = r6$user_info$user_id)
+        
+        r6$user_info$bets <- fetch_table_all_bets(r6)
+        
+        output$your_bets_table <- renderReactable({
+          f_your_bets_table(r6)
+        })
+        
+        shinyjs::hide(selector = ".full-page-spinner") 
         
       }
       
-      df_your_odds(df_update)
-      df_use <- df_update %>% filter(cancelled == F) %>% select(-cancelled)
-      
-      output$your_bets_table <- renderReactable({
-        f_your_bets_table(df_use)
-      })
-      
     })
+    
     
     observeEvent(input$cancel, ignoreInit = T, {
       
-      df_before = df_your_odds()
-      df_update = df_before %>% 
-        mutate(
-          cancelled = ifelse(input$cancel == id, TRUE, cancelled)
-        )
+      utc_time_now <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+      utc_time_schedule <- r6$data$pl_schedule %>% 
+        filter(
+          HomeTeam == r6$selected_home_team,
+          AwayTeam == r6$selected_away_team
+        ) %>% 
+        pull(utc_date)
       
-      df_your_odds(df_update)
-      df_use <- df_update %>% filter(cancelled == F) %>% select(-cancelled)
+      if (utc_time_now > utc_time_schedule){
+        showNotification("Game already started", type = "error", duration = 5)
+      }
+      else {
+        
+        
+        shinyjs::show(selector = ".full-page-spinner") 
+        
+        #CANCEL BET
+        cancel_bet_in_db(bet_id = input$cancel)
+        
+        r6$user_info$bets <- fetch_table_all_bets(r6)
+        
+        output$your_bets_table <- renderReactable({
+          f_your_bets_table(r6)
+        })
+        
+        shinyjs::hide(selector = ".full-page-spinner") 
+        
+      }
       
-      output$your_bets_table <- renderReactable({
-        f_your_bets_table(df_use)
-      })
     })
+    
+    
     
   })
 }
-

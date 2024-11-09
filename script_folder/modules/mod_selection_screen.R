@@ -8,7 +8,7 @@ team_select_UI <- function(id) {
   
   
   fluidPage(
-
+    
     div(class = "gradient-bg-estimation",
         br(),
         
@@ -112,31 +112,28 @@ team_select_Server <- function(id, r6) {
       
       # filter for the right data to be showed
       if(input$team_select != "Select Team") {
-        df_show_reactable <- 
+        df_filtered_team <- 
           rbind(r6$data$schedule %>% filter(HomeTeam == input$team_select),
                 r6$data$schedule %>% filter(AwayTeam == input$team_select)
-          ) %>% f_prepare_schedule_view
+          ) 
       } else{
-        df_show_reactable <- r6$data$schedule %>% f_prepare_schedule_view
+        
+        df_filtered_team <- r6$data$schedule
       }
       
+      df_use <- df_filtered_team %>% 
+        select(Date, Time, HomeTeam, AwayTeam) %>% 
+        filter(Date >= yesterday) %>%
+        arrange(Date) %>% 
+        f_prepare_schedule_view %>% 
+        mutate(analyze = "", date_use = Date)
       
-      # Show only PL:
-      if(input$league_select_buttons != "EPL - English Premier League") {
-        df_use <- r6$data$pl_schedule %>% f_prepare_schedule_view %>%
-          mutate(date_use = 1, analyze = "") %>%
-          filter(0==1)
-        
-        print(df_use)
-      }else{
-        
-        df_use <- df_show_reactable %>% mutate(analyze = "", date_use = Date)
-        formatted_dates_list <- lapply(df_use$date_use, f_format_date_with_suffix) 
-        
-        df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
-          mutate(Date = formatted_dates) %>% 
-          select(-formatted_dates)
-      } # PL IF END
+      formatted_dates_list <- lapply(df_use$date_use, f_format_date_with_suffix) 
+      
+      df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
+        mutate(Date = formatted_dates) %>% 
+        select(-formatted_dates)
+      
       
       output$schedule_table <- renderReactable({
         reactable(df_use, 
@@ -183,6 +180,7 @@ team_select_Server <- function(id, r6) {
       
       
     })
+    
     
     
     observeEvent(input$analyze, {

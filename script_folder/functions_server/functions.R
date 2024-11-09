@@ -320,8 +320,6 @@ f_calculate_la_liga_table <- function(df) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # DB FUNCTIONS ----
 
-library(RPostgres)
-
 fetch_data_from_db <- function(query) {
   # Establish the connection
   con <- dbConnect(
@@ -339,8 +337,164 @@ fetch_data_from_db <- function(query) {
   # Execute the query and fetch the results
   df <- dbGetQuery(con, query)
   
+  # dbDisconnect(con)
+  
   return(df)
 }
+
+write_data_to_db_users <- function(username, password_hash, email = "dummy", role = "user") {
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # SQL query for parameterized insertion
+  sql <- "
+    INSERT INTO users (username, password_hash, email, role)
+    VALUES ($1, $2, $3, $4)
+  "
+  
+  # Execute the query with parameters
+  tryCatch({
+    dbExecute(con, sql, params = list(username, password_hash, email, role))
+    print("New user created successfully!")
+  }, error = function(e) {
+    print(paste("Error creating user:", e$message))
+  })
+  
+  # dbDisconnect(con)
+  
+}
+
+write_data_to_db_bets <- function(bet, odds, match_id, user_id, bet_concluded = NULL, cancelled = FALSE) {
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # SQL query for parameterized insertion
+  sql <- "
+    INSERT INTO bets (bet, odds, placed, bet_concluded, match_id, user_id, cancelled)
+    VALUES ($1, $2, NOW(), $3, $4, $5, $6)
+  "
+  
+  # Execute the query with parameters
+  tryCatch({
+    dbExecute(con, sql, params = list(bet, odds, if (is.null(bet_concluded)) NA else bet_concluded, match_id, user_id, cancelled))
+    # print("New bet added successfully!")
+  }, error = function(e) {
+    print(paste("Error adding bet:", e$message))
+  })
+  
+  # dbDisconnect(con)
+  
+}
+
+
+cancel_bet_in_db <- function(bet_id,  new_cancelled = TRUE) {
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # Build the SQL update query
+  sql <- paste0(
+    "UPDATE bets SET cancelled = ", ifelse(new_cancelled, "TRUE", "FALSE"), 
+    " WHERE bet_id = '", bet_id, "'"
+  )
+  
+  # Execute the query
+  tryCatch({
+    dbExecute(con, sql)
+    # showNotification("Bet updated successfully!")
+  }, error = function(e) {
+    # showNotification(paste("Error updating bet:", e$message), type = "error")
+  })
+  
+  # dbDisconnect(con)
+  
+}
+
+
+format_bets_for_match_bets <- function(bets, match_id_input) {
+  
+  df_your_odds <- bets %>% 
+    filter(match_id == match_id_input) %>% 
+    select(bet, odds, placed, bet_id)
+  
+  df_your_odds <- df_your_odds %>% 
+    mutate(
+      placed_local = with_tz(placed, tzone = Sys.timezone()),
+      placed = format(placed_local, "%Y-%m-%d %H:%M")
+    ) %>% 
+    arrange(placed) %>% 
+    select(-placed_local)
+  
+  return(df_your_odds)
+  
+  
+  
+}
+
+fetch_table_all_bets <- function(r6) {
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query, 
+                         list(r6$user_info$user_id
+                         )
+  ) 
+  
+  
+  all_bets <- all_bets %>% 
+    mutate(
+      placed_local = with_tz(placed, tzone = Sys.timezone()),
+      placed = format(placed_local, "%Y-%m-%d %H:%M")
+    ) %>% 
+    arrange(placed) %>% 
+    select(-placed_local)
+  
+  return(all_bets)
+  
+}
+
+
 
 
 
@@ -1230,7 +1384,7 @@ f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home"
     hoverinfo = 'value+percent',
     # hoverinfo = 'text',              
     # text = ~paste('</br> Bets: ', values,
-                  # '</br>', round(values / total_bets * 100, 1), '%'), 
+    # '</br>', round(values / total_bets * 100, 1), '%'), 
     marker = list(
       colors = color_vec, # Colors for each segment
       line = list(color = "white", width = 2)       # White borders between segments
@@ -1254,7 +1408,7 @@ f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home"
       showlegend = FALSE,             # Hide the legend
       paper_bgcolor = 'rgba(0, 0, 0, 0)', # Transparent background
       plot_bgcolor = 'rgba(0, 0, 0, 0)'   # Transparent plot background
-
+      
     ) %>%
     style(
       hoverlabel = list(
@@ -1269,46 +1423,179 @@ f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home"
 }
 
 
-f_your_bets_table <- function(df_use){
+f_your_bets_table <- function(r6){
+  
+  # bet, odds, placed, bet_id
+  
+  df_use <- format_bets_for_match_bets(r6$user_info$bets, 
+                                       paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending))
   
   r <- reactable(df_use, 
-            columns = list(
-              Bet = colDef(minWidth = 250, align = "left", style = list(fontSize = "20px"), vAlign = "center"),
-              
-              Odds = colDef(minWidth = 85, align = "center", style = list(fontSize = "28px"), vAlign = "center"),
-              Placed = colDef(minWidth = 200, align = "center", style = list(fontSize = "20px"), vAlign = "center"),
-              
-              id = colDef(
-                name = "Cancel",
-                sortable = FALSE, vAlign = "center", align = "center",
-                cell = function() htmltools::tags$button(class = "odds-button-worse", "Cancel", style = "font-size: 18px;")
-              )
-            ),
-            
-            # Default stuff
-            pagination = FALSE, sortable = FALSE, fullWidth = FALSE,
-            onClick = JS("function(rowInfo, column) {
+                 columns = list(
+                   bet = colDef(name = "BET", minWidth = 250, align = "left", style = list(fontSize = "20px"), vAlign = "center"),
+                   
+                   odds = colDef(name = "ODDS", minWidth = 85, align = "center", style = list(fontSize = "28px"), vAlign = "center"),
+                   placed = colDef(name = "Placed", minWidth = 200, align = "center", style = list(fontSize = "20px"), vAlign = "center"),
+                   
+                   bet_id = colDef(
+                     name = "Cancel",
+                     sortable = FALSE, vAlign = "center", align = "center",
+                     cell = function() htmltools::tags$button(class = "odds-button-worse", "Cancel", style = "font-size: 18px;")
+                   )
+                 ),
+                 
+                 # Default stuff
+                 pagination = FALSE, sortable = FALSE, fullWidth = FALSE,
+                 onClick = JS("function(rowInfo, column) {
                     // Only handle click events on the 'details' column
-                    if (column.id !== 'id') {
+                    if (column.id !== 'bet_id') {
                       return
                     }
 
                     if (window.Shiny) {
-                      Shiny.setInputValue('top_of_estimation_tab-card_module-cancel', rowInfo.values['id'], { priority: 'event' })
+                      Shiny.setInputValue('top_of_estimation_tab-card_module-cancel', rowInfo.values['bet_id'], { priority: 'event' })
                     }
                   }"),
-            
-            class = "selection_table",
-            
-            theme = reactableTheme(
-              backgroundColor = "transparent"
-            )
+                 
+                 class = "selection_table",
+                 
+                 theme = reactableTheme(
+                   backgroundColor = "transparent"
+                 )
   )
   
   return(r)
   
 }
 
+
+f_format_all_bets <- function(r6){
+  
+  df_matches <- r6$data$pl_historic %>% 
+    mutate(
+      match_id = paste0(HomeTeam, "-", AwayTeam , "-", Season_ending_year),
+      winning_team = ifelse(FTR == "H", HomeTeam,
+                            ifelse(FTR == "A", HomeTeam,"DRAW")),
+      Date = as.Date(as.Date(Date, format = "%d/%m/%Y"), "%Y-%m-%d")
+    ) %>% 
+    
+    select(
+      match_id, winning_team, HomeTeam, AwayTeam, Date, Time
+    ) 
+  
+  df_schedule <- r6$data$pl_schedule %>% 
+    mutate(
+      match_id = paste0(HomeTeam, "-", AwayTeam , "-", current_season_ending),
+    ) %>% 
+    select(
+      match_id, HomeTeam, AwayTeam, Date, Time
+    )
+  
+  
+  df_all_bets = r6$user_info$bets %>% 
+    mutate(
+      placed_local = with_tz(placed, tzone = Sys.timezone()),
+      placed = format(placed_local, "%Y-%m-%d %H:%M"),
+      
+      # bet_concluded = ifelse(is.null(bet_concluded), "Unknown", bet_concluded)
+      
+    ) %>% 
+    arrange(placed) %>% 
+    
+    left_join(
+      df_matches,
+      by = c("match_id" = "match_id")
+    ) %>% 
+    
+    mutate(
+      bet_concluded2 = ifelse(is.na(winning_team),winning_team,
+                              ifelse(winning_team == bet, odds, -1)),   # NO NEED WHEN CALCULATED FROM THE DB
+      
+      bet_concluded = ifelse(is.na(bet_concluded2), NA, bet_concluded2)  # NULL OR NA?
+    ) %>%
+    select(-placed_local, -bet_id, -bet_concluded2)
+  
+  df_use <- rbind(
+    df_all_bets %>% filter(!is.na(HomeTeam)),
+    df_all_bets %>% filter(is.na(HomeTeam)) %>% 
+      select(-HomeTeam, -AwayTeam, -Date, -Time) %>% 
+      left_join(
+        df_schedule,
+        by = c("match_id" = "match_id")
+      )
+  )
+  
+  
+  return(df_use)
+}
+
+f_all_bets_table <- function(r6){
+  
+  df_use <- f_format_all_bets(r6) %>% 
+    mutate(vs_col = "VS") %>% 
+    select(HomeTeam, vs_col, AwayTeam, bet, odds, bet_concluded, Date, Time) 
+  
+  
+  r <- reactable(df_use, 
+                 columns = list(
+                   Date = colDef(minWidth = 105, align = "center", 
+                                 style = list(fontSize = "18px", color = "#14499F"), vAlign = "center"),
+                   
+                   Time = colDef(minWidth = 80, align = "center", 
+                                 style = list(fontSize = "18px", color = "#14499F"), vAlign = "center"), 
+                   
+                   HomeTeam = colDef(name = "Home Team", minWidth = 170, align = "right", vAlign = "center",
+                                     style = function(value, index) {
+                                       # Set text to black and larger font if it matches the 'bet' column, else default
+                                       if (value == df_use$bet[index]) {
+                                         list(color = "black", fontSize = "22px")
+                                       } else {
+                                         list(color = "#14499F", fontSize = "16px")
+                                       }
+                                     }),
+                   
+                   vs_col = colDef(name = "", minWidth = 60, align = "center", vAlign = "center",
+                                   style = function(value, index) {
+                                     # Set text to black and larger font if it matches the 'bet' column, else default
+                                     if ("DRAW" == df_use$bet[index]) {
+                                       list(color = "black", fontSize = "22px")
+                                     } else {
+                                       list(color = "#14499F", fontSize = "16px")
+                                     }
+                                   }),
+                   
+                   AwayTeam = colDef(name = "Away Team", minWidth = 170, vAlign = "center",
+                                     style = function(value, index) {
+                                       # Set text to black and larger font if it matches the 'bet' column, else default
+                                       if (value == df_use$bet[index]) {
+                                         list(color = "black", fontSize = "22px")
+                                       } else {
+                                         list(color = "#14499F", fontSize = "16px")
+                                       }
+                                     }),
+                   
+                   bet = colDef(show = F), 
+                   
+                   odds = colDef(name = "ODDS", minWidth = 60, align = "center", 
+                                 style = list(fontSize = "25px", color = "#14499F"), vAlign = "center"),
+                   
+                   bet_concluded = colDef(name = "Return", minWidth = 100, align = "center", 
+                                          style = list(fontSize = "20px", color = "#14499F"), vAlign = "center")
+                 ),
+                 
+                 # Default settings
+                 pagination = TRUE, sortable = TRUE, fullWidth = FALSE,
+                 class = "selection_table",
+                 theme = reactableTheme(
+                   backgroundColor = "transparent"
+                 )
+  )
+  
+
+  
+  return(r)
+  
+}
 
 
 
