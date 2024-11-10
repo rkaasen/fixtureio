@@ -51,8 +51,6 @@ from sqlalchemy import create_engine
 table_name_to_query = "premier_league_data_current_lambda"
 table_name_to_query = "premier_league_data_historical"
 table_name_to_query = "premier_league_fixtures_current_lambda"
-table_name_to_query = "users"
-# table_name_to_query = "bets"
 
 # Set up environment variables or replace these with your database details
 db_host = os.getenv("DB_HOST", "your_db_host")
@@ -65,7 +63,7 @@ db_port = os.getenv("DB_PORT", "5432")  # Default PostgreSQL port is 5432
 engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
 
 # Define the query (adjust the table name to your actual table)
-query = f"SELECT * FROM {table_name_to_query} "
+query = f"SELECT * FROM {table_name_to_query} LIMIT 10;"
 
 # Fetch data into a pandas DataFrame
 try:

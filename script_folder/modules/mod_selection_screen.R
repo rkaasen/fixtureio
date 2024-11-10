@@ -108,7 +108,7 @@ team_select_Server <- function(id, r6) {
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # CONTROLS main table
     
-    observeEvent(list(input$league_select_buttons,input$league_select, input$team_select), {
+    observeEvent(list(input$league_select_buttons,input$league_select, input$team_select, watch("user_logged_in"), watch("user_logged_out")), {
       
       # filter for the right data to be showed
       if(input$team_select != "Select Team") {
@@ -126,7 +126,8 @@ team_select_Server <- function(id, r6) {
         filter(Date >= yesterday) %>%
         arrange(Date) %>% 
         f_prepare_schedule_view %>% 
-        mutate(analyze = "", date_use = Date)
+        mutate(
+          analyze = "", date_use = Date)
       
       formatted_dates_list <- lapply(df_use$date_use, f_format_date_with_suffix) 
       
@@ -134,23 +135,42 @@ team_select_Server <- function(id, r6) {
         mutate(Date = formatted_dates) %>% 
         select(-formatted_dates)
       
+      columns_list = list(
+        Date = colDef(minWidth = 165, align = "left", vAlign = "center"),
+        date_use = colDef(show = F), 
+        Time = colDef(minWidth = 85, align = "center", style = list(fontSize = "20px"), vAlign = "center"), 
+        HomeTeam = colDef(name = "Home Team", minWidth = 200, align = "right", vAlign = "center"),
+        vs_col = colDef(name = "", minWidth = 40, align = "center", vAlign = "center"),
+        AwayTeam = colDef(name = "Away Team", minWidth = 200, vAlign = "center"),
+        # Analyze column:
+        analyze = colDef(
+          name = "",
+          sortable = FALSE, vAlign = "center",
+          cell = function() htmltools::tags$button(class = "reactable-button", "Analyze")
+        )
+      )
+      
+      if(r6$user_info$logged_in){
+        df_use <- df_use %>%
+          mutate(match_id = paste0(HomeTeam, "-", AwayTeam , "-", current_season_ending)) %>% 
+          left_join(
+            r6$user_info$bets  %>% group_by(match_id) %>%
+              summarise(`Active Bets` = n()) %>%
+              ungroup()
+          ) %>% 
+          select(-match_id)
+        
+        if ("Active Bets" %in% names(df_use)){
+          columns_list$`Active Bets` <-  colDef(name = "Active bets", minWidth = 100, align = "center", style = list(fontSize = "20px"))
+        }
+        
+      }
+      
+
       
       output$schedule_table <- renderReactable({
         reactable(df_use, 
-                  columns = list(
-                    Date = colDef(minWidth = 165, align = "left", vAlign = "center"),
-                    date_use = colDef(show = F), 
-                    Time = colDef(minWidth = 85, align = "center", style = list(fontSize = "20px"), vAlign = "center"), 
-                    HomeTeam = colDef(name = "Home Team", minWidth = 200, align = "right", vAlign = "center"),
-                    vs_col = colDef(name = "", minWidth = 40, align = "center", vAlign = "center"),
-                    AwayTeam = colDef(name = "Away Team", minWidth = 200, vAlign = "center"),
-                    # Analyze column:
-                    analyze = colDef(
-                      name = "",
-                      sortable = FALSE, vAlign = "center",
-                      cell = function() htmltools::tags$button(class = "reactable-button", "Analyze")
-                    )
-                  ),
+                  columns = columns_list,
                   # groups (by date)
                   groupBy = "Date",  defaultExpanded = TRUE,
                   # Default stuff
