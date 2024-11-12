@@ -248,9 +248,14 @@ server <- function(input, output, session) {
   
   r6$team_list$pl_teams <- pl_teams
   # r6$team_list$ll_teams <- ll_teams
+  
+  r6$odds$pl <- pl_enriched_schedule
+  
 
   r6$standings$`English Premier League` <- pl_standings_table
   r6$chosen_stats_list_prev <- c()
+  
+
   
   
   # Initialize triggers

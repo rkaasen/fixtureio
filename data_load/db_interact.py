@@ -52,7 +52,10 @@ table_name_to_query = "premier_league_data_current_lambda"
 table_name_to_query = "premier_league_data_historical"
 table_name_to_query = "premier_league_fixtures_current_lambda"
 table_name_to_query = "users"
-# table_name_to_query = "bets"
+table_name_to_query = "bets"
+# table_name_to_query = "premier_league_fixtures_current_enriched"
+# table_name_to_query = "team_name_translate"
+
 
 # Set up environment variables or replace these with your database details
 db_host = os.getenv("DB_HOST", "your_db_host")
@@ -89,7 +92,7 @@ from sqlalchemy import create_engine, text
 import os
 
 # Define the table name you want to delete
-table_name = "premier_league_data_current"
+table_name = "premier_league_fixtures_current_enriched"
 
 import psycopg2
 import os

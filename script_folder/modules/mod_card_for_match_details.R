@@ -89,9 +89,9 @@ card_for_match_details_UI <- function(id) {
                                             ),
                                             column(4,
                                                    fluidRow(
-                                                     column(2, offset = 1, align = "middle", actionButton(NS(id,"btn_home_odds"), textOutput(NS(id,"fair_home_dummy")), class = "odds-button-same")),
-                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_draw_odds"), textOutput(NS(id,"fair_draw_dummy")), class = "odds-button-better")),
-                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_away_odds"), textOutput(NS(id,"fair_away_dummy")), class = "odds-button-worse"))
+                                                     column(2, offset = 1, align = "middle", actionButton(NS(id,"btn_home_odds"), textOutput(NS(id,"home_odds")), class = "odds-button-same")),
+                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_draw_odds"), textOutput(NS(id,"draw_odds")), class = "odds-button-better")),
+                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_away_odds"), textOutput(NS(id,"away_odds")), class = "odds-button-worse"))
                                                    ))
                                             
                                             
@@ -103,7 +103,7 @@ card_for_match_details_UI <- function(id) {
                                    fluidRow(
                                      style = "display: flex;",
                                      
-                                     column(4, align = "center",
+                                     column(4, align = "center", id = NS(id, "pie_chart_show"),
                                             class = "rounded-column",
                                             style = "background: linear-gradient(to bottom, #f7f7f7, #ececed); margin-left: 30px;",
                                             plotlyOutput(NS(id,"pie_chart"))
@@ -159,6 +159,9 @@ card_for_match_details_UI <- function(id) {
                                      # hidden(
                                      column(7, id = NS(id, "no_user_info"),
                                             h3("Log in to use betting")
+                                     ),
+                                     column(7, id = NS(id, "betting_closed"),
+                                            h3("Betting not open for this match")
                                      )
                                      # )
                                    )
@@ -189,9 +192,9 @@ card_for_match_details_UI <- function(id) {
 card_for_match_details_Server <- function(id, r6) {
   moduleServer(id, function(input, output, session) {
     
-    fair_home_dummy_val <- reactiveVal(NULL)
-    fair_draw_dummy_val <- reactiveVal(NULL)
-    fair_away_dummy_val <- reactiveVal(NULL)
+    home_odds <- reactiveVal(NULL)
+    draw_odds <- reactiveVal(NULL)
+    away_odds <- reactiveVal(NULL)
     
     to_win <- reactiveVal(NULL)
     to_win_odds <- reactiveVal(NULL)
@@ -251,13 +254,44 @@ card_for_match_details_Server <- function(id, r6) {
         f_last_10_table(r6$data$filtered, away_team)
       )
       
+      # hide the odds each time the card is opened
       shinyjs::hide("your_odds_row")
       
+      # Reset the 3 buttons, so they dont show last game's values
+      output$home_odds <- renderText("NA")
+      output$away_odds <- renderText("NA")
+      output$draw_odds <- renderText("NA")
+      
+      # text under the buttons not to show last selected team (from last card)
+      shinyjs::hide("place_bet_row")
+      shinyjs::show("chose_bet_row")
+      
+      # check if betting is open
+      odds_row <- r6$odds$pl %>% 
+        filter(
+          HomeTeam == r6$selected_home_team,
+          AwayTeam == r6$selected_away_team
+        )
+      
+      
       if(r6$user_info$logged_in){
-        shinyjs::show("user_info")
-        shinyjs::hide("no_user_info")
+        
+        if(nrow(odds_row) > 0){
+          shinyjs::show("user_info")
+          shinyjs::show("pie_chart_show")
+          
+          shinyjs::hide("no_user_info")
+        } else{
+          shinyjs::hide("user_info")
+          shinyjs::hide("pie_chart_show")
+          
+          shinyjs::show("betting_closed")
+        }
+
       } else {
         shinyjs::hide("user_info")
+        shinyjs::hide("pie_chart_show")
+        
         shinyjs::show("no_user_info")
       }
       
@@ -285,14 +319,32 @@ card_for_match_details_Server <- function(id, r6) {
       output$fair_draw <- renderText(round(100/draw_perc,2))
       output$fair_away <- renderText(round(100/away_perc,2))
       
-      # Needs to be calculated better:
-      fair_home_dummy_val((100/home_perc)-0.04)
-      fair_draw_dummy_val((100/draw_perc)+0.27)
-      fair_away_dummy_val((100/away_perc)-0.16)
       
-      output$fair_home_dummy <- renderText(round(as.numeric(fair_home_dummy_val()),2))
-      output$fair_draw_dummy <- renderText(round(as.numeric(fair_draw_dummy_val()),2))
-      output$fair_away_dummy <- renderText(round(as.numeric(fair_away_dummy_val()),2))
+      odds_row <- r6$odds$pl %>% 
+        filter(
+          HomeTeam == r6$selected_home_team,
+          AwayTeam == r6$selected_away_team
+        )
+      
+      if(nrow(odds_row) > 0){
+        home_perc_bet <- odds_row %>% pull(`Home Win Probability (%)`)
+        away_perc_bet <- odds_row %>% pull(`Away Win Probability (%)`)
+        draw_perc_bet <- odds_row %>% pull(`Draw Probability (%)`)
+        
+        # Needs to be calculated better:
+        home_odds((100/home_perc_bet))
+        away_odds((100/away_perc_bet))
+        draw_odds((100/draw_perc_bet))
+        
+        output$home_odds <- renderText(round(as.numeric(home_odds()),2))
+        output$away_odds <- renderText(round(as.numeric(away_odds()),2))
+        output$draw_odds <- renderText(round(as.numeric(draw_odds()),2))
+        
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # BETTING NOT AVAILABLE
+        
+      }
+      
       
     })
     
@@ -300,6 +352,8 @@ card_for_match_details_Server <- function(id, r6) {
       
       shinyjs::show("your_odds_row")
       
+      # SET REAL NUMBER OF ODDS
+      # show pie
       output$pie_chart <- renderPlotly({
         f_pie_n_bets(
           list_n_bets = c(440, 200, 700), 
@@ -307,13 +361,11 @@ card_for_match_details_Server <- function(id, r6) {
         )
       })
       
-      if(r6$user_info$logged_in){
-        
-        output$your_bets_table <- renderReactable({
-          f_your_bets_table(r6)
-        })
-        
-      }
+      # show odds active on the match  
+      output$your_bets_table <- renderReactable({
+        f_your_bets_table(r6)
+      })
+      
       
     })
     
@@ -329,28 +381,28 @@ card_for_match_details_Server <- function(id, r6) {
     observeEvent(input$btn_home_odds, {
       
       to_win(r6$selected_home_team)
-      to_win_odds(as.numeric(fair_home_dummy_val()))
+      to_win_odds(as.numeric(home_odds()))
       
       output$odds_string <- renderText(paste0(r6$selected_home_team))
-      output$odds_value  <- renderText(round(as.numeric(fair_home_dummy_val()),2))
+      output$odds_value  <- renderText(round(as.numeric(home_odds()),2))
       shinyjs::show("to_win_text")
     })
     observeEvent(input$btn_draw_odds, {
       
       to_win("DRAW")
-      to_win_odds(as.numeric(fair_draw_dummy_val()))
+      to_win_odds(as.numeric(draw_odds()))
       
       output$odds_string <- renderText(paste0("DRAW"))
-      output$odds_value  <- renderText(round(as.numeric(fair_draw_dummy_val()),2))
+      output$odds_value  <- renderText(round(as.numeric(draw_odds()),2))
       shinyjs::hide("to_win_text")
     })
     observeEvent(input$btn_away_odds, {
       
       to_win(r6$selected_away_team)
-      to_win_odds(as.numeric(fair_away_dummy_val()))
+      to_win_odds(as.numeric(away_odds()))
       
       output$odds_string <- renderText(paste0(r6$selected_away_team))
-      output$odds_value  <- renderText(round(as.numeric(fair_away_dummy_val()),2))
+      output$odds_value  <- renderText(round(as.numeric(away_odds()),2))
       shinyjs::show("to_win_text")
     })
     

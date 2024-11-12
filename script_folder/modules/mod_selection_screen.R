@@ -121,6 +121,12 @@ team_select_Server <- function(id, r6) {
         df_filtered_team <- r6$data$schedule
       }
       
+      # odds_open_df <- r6$odds$pl %>% 
+      #   filter(
+      #     HomeTeam == r6$selected_home_team,
+      #     AwayTeam == r6$selected_away_team
+      #   )
+      
       df_use <- df_filtered_team %>% 
         select(Date, Time, HomeTeam, AwayTeam) %>% 
         filter(Date >= yesterday) %>%

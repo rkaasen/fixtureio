@@ -1,8 +1,90 @@
 # %%
-# function to help load data
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# CONFIGS
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+game_stats_config = {
+    "m1": {"metric": "Points_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
+    "m2": {"metric": "Goals_Scored_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
+    "m3": {"metric": "Goals_Conceded_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
+    "m4": {"metric": "Shots_OT_For_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
+    "m5": {"metric": "Shots_OT_Conceded_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
+    
+    #h2h:
+    "m9": {"metric": "Points_lx", "n_matches": 5, "h2h_teams": ["home_team", "away_team"], "home_away": False, "weight": 0.5},
+    "m10": {"metric": "Goals_Scored_lx", "n_matches": 5, "h2h_teams": ["home_team", "away_team"], "home_away": False, "weight": 0.5},
+    "m11": {"metric": "Goals_Conceded_lx", "n_matches": 5, "h2h_teams": ["home_team", "away_team"], "home_away": False, "weight": 0.5},
+    
+    #home_away:
+    "m6": {"metric": "Points_lx", "n_matches": 5, "h2h_teams": "SKIP", "home_away": True, "weight": 0.5},
+    "m7": {"metric": "Goals_Scored_lx", "n_matches": 5, "h2h_teams": "SKIP", "home_away": True, "weight": 0.5},
+    "m8": {"metric": "Goals_Conceded_lx", "n_matches": 5, "h2h_teams": "SKIP", "home_away": True, "weight": 0.5},
+}
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# FUNCTIONS
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 import pandas as pd
+from sqlalchemy import create_engine
+from datetime import datetime
+from datetime import timedelta
+import os
 
+
+# Upload DataFrame to PostgreSQL
+def upload_df_to_postgres(df, table_name, if_exists_rule= "replace"):
+    db_host = os.getenv("DB_HOST")
+    db_name = os.getenv("DB_NAME")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_port = os.getenv("DB_PORT", 5432)
+
+    # Create the SQLAlchemy engine
+    engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
+    df.to_sql(table_name, engine, schema="public", if_exists=if_exists_rule, index=False)
+    print(f"Data uploaded to PostgreSQL table '{table_name}' successfully.")
+    engine.dispose()
+
+
+def get_data_from_db(table_name_to_query):
+    # Set up environment variables or replace these with your database details
+    db_host = os.getenv("DB_HOST", "your_db_host")
+    db_name = os.getenv("DB_NAME", "your_db_name")
+    db_user = os.getenv("DB_USER", "your_db_user")
+    db_password = os.getenv("DB_PASSWORD", "your_db_password")
+    db_port = os.getenv("DB_PORT", "5432")  # Default PostgreSQL port is 5432
+
+    # Create the SQLAlchemy engine to connect to the database
+    engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
+
+    # Define the query (adjust the table name to your actual table)
+    query = f"SELECT * FROM {table_name_to_query} "
+
+    # Fetch data into a pandas DataFrame
+    try:
+        with engine.connect() as connection:
+            df = pd.read_sql(query, connection)
+            print("Data fetched successfully:")
+    except Exception as e:
+        print(f"Error querying the database: {e}")
+    finally:
+        # Dispose of the engine connection
+        engine.dispose()
+    return df
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def f_select_columns_historical_data(df):
     # Selecting and renaming columns
     df_out = pd.concat([
@@ -29,70 +111,9 @@ def f_select_columns_historical_data(df):
     
     return df_out
 
-# GET DATA
 
-# %%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-import os
-import pandas as pd
-from sqlalchemy import create_engine
-
-#define table to query
-table_name_to_query1 = "premier_league_data_current_lambda"
-table_name_to_query2 = "premier_league_data_historical"
-
-# Set up environment variables or replace these with your database details
-db_host = os.getenv("DB_HOST", "your_db_host")
-db_name = os.getenv("DB_NAME", "your_db_name")
-db_user = os.getenv("DB_USER", "your_db_user")
-db_password = os.getenv("DB_PASSWORD", "your_db_password")
-db_port = os.getenv("DB_PORT", "5432")  # Default PostgreSQL port is 5432
-
-# Create the SQLAlchemy engine to connect to the database
-engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
-
-# Define the query (adjust the table name to your actual table)
-query1 = f"SELECT * FROM {table_name_to_query1} "
-
-# Fetch data into a pandas DataFrame
-try:
-    with engine.connect() as connection:
-        df1 = pd.read_sql(query1, connection)
-        print("Data fetched successfully:")
-except Exception as e:
-    print(f"Error querying the database: {e}")
-finally:
-    # Dispose of the engine connection
-    engine.dispose()
-    
-    
-# Define the query (adjust the table name to your actual table)
-query2 = f"SELECT * FROM {table_name_to_query2} "
-
-# Fetch data into a pandas DataFrame
-try:
-    with engine.connect() as connection:
-        df2 = pd.read_sql(query2, connection)
-        print("Data fetched successfully:")
-except Exception as e:
-    print(f"Error querying the database: {e}")
-finally:
-    # Dispose of the engine connection
-    engine.dispose()
-
-# bind the 2 tables after applying the function f_select_columns_historical_data to both 
-df1 = f_select_columns_historical_data(df1)
-df2 = f_select_columns_historical_data(df2)
-df_raw = pd.concat([df1, df2])
-
-
-
-
-# %%
-import pandas as pd
-from sqlalchemy import create_engine
-
-# Helper functions (kept as is from previously working versions)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def f_team_cols_rename(df, home_metrics=True):
     if home_metrics:
         df = df.rename(columns={
@@ -122,6 +143,8 @@ def f_team_cols_rename(df, home_metrics=True):
 
     return df
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def f_part_calculate_scores(df, n_matches=5):
     # Sort by 'Team' and 'Date' in descending order to get the latest matches
     df = df.sort_values(by=['Team', 'Date'], ascending=[True, False])
@@ -156,6 +179,9 @@ def f_part_calculate_scores(df, n_matches=5):
     
     return df_out
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def f_part_calculate_ranks(df):
     df_out = df.assign(
         Rank_Goals_Scored_lx=df['Goals_Scored_lx'].rank(method='min', ascending=False),
@@ -168,8 +194,58 @@ def f_part_calculate_ranks(df):
     )
     return df_out
 
-import pandas as pd
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def convert_to_r_format(df):
+    # Add 'Home_Away' column if it does not exist, defaulting to 'Combined'
+    if 'Home_Away' not in df.columns:
+        df['Home_Away'] = 'Combined'
+
+    # Melt the DataFrame to a long format
+    df_long = df.melt(
+        id_vars=['Team', 'n_matches_in_sample', 'Home_Away'],
+        var_name='metric',
+        value_name='value'
+    )
+    
+    # Ensure the 'value' column is explicitly of type float
+    df_long['value'] = df_long['value'].astype(float)
+
+    # Define ranking order for each metric
+    metric_order = {
+        'Goals_Scored_lx': False,       # Descending order for higher is better
+        'Goals_Conceded_lx': True,      # Ascending order for lower is better
+        'Points_lx': False,             # Descending order for higher is better
+        'Shots_For_lx': False,          # Descending order for higher is better
+        'Shots_Conceded_lx': True,      # Ascending order for lower is better
+        'Shots_OT_For_lx': False,       # Descending order for higher is better
+        'Shots_OT_Conceded_lx': True    # Ascending order for lower is better
+    }
+    
+    # Apply ranking for each metric based on its specified order within each 'Home_Away' group
+    df_long['rank'] = df_long.groupby(['Home_Away', 'metric'], group_keys=False).apply(
+        lambda x: x['value'].rank(
+            method='min',
+            ascending=metric_order.get(x.name[1], False)  # Get the order based on 'metric', default False if not found
+        )
+    ).astype(int)  # Forcefully cast ranks to int
+    
+    # Rearrange columns to match the desired output format
+    df_long = df_long[['Team', 'Home_Away', 'n_matches_in_sample', 'rank', 'value', 'metric']]
+    
+    # Sort for readability
+    df_long = df_long.sort_values(by=['metric', 'rank']).reset_index(drop=True)
+    
+    return df_long
+
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Main function to calculate league metrics
 def f_metrics_league(data, n_matches=3, h2h_teams="SKIP", home_away=False):
     # Step 1: Check for incompatible parameters
     if h2h_teams != "SKIP" and home_away:
@@ -260,123 +336,11 @@ def f_metrics_league(data, n_matches=3, h2h_teams="SKIP", home_away=False):
     return df_results
 
 
-def convert_to_r_format(df):
-    # Add 'Home_Away' column if it does not exist, defaulting to 'Combined'
-    if 'Home_Away' not in df.columns:
-        df['Home_Away'] = 'Combined'
 
-    # Melt the DataFrame to a long format
-    df_long = df.melt(
-        id_vars=['Team', 'n_matches_in_sample', 'Home_Away'],
-        var_name='metric',
-        value_name='value'
-    )
-    
-    # Define ranking order for each metric
-    metric_order = {
-        'Goals_Scored_lx': False,       # Descending order for higher is better
-        'Goals_Conceded_lx': True,      # Ascending order for lower is better
-        'Points_lx': False,             # Descending order for higher is better
-        'Shots_For_lx': False,          # Descending order for higher is better
-        'Shots_Conceded_lx': True,      # Ascending order for lower is better
-        'Shots_OT_For_lx': False,       # Descending order for higher is better
-        'Shots_OT_Conceded_lx': True    # Ascending order for lower is better
-    }
-    
-    # Apply ranking for each metric based on its specified order within each 'Home_Away' group
-    df_long['rank'] = df_long.groupby(['Home_Away', 'metric'], group_keys=False).apply(
-        lambda x: x['value'].rank(
-            method='min',
-            ascending=metric_order.get(x.name[1], False)  # Get the order based on 'metric', default False if not found
-        )
-    ).astype(int)
-    
-    # Rearrange columns to match the desired output format
-    df_long = df_long[['Team', 'Home_Away', 'n_matches_in_sample', 'rank', 'value', 'metric']]
-    
-    # Sort for readability
-    df_long = df_long.sort_values(by=['metric', 'rank']).reset_index(drop=True)
-    
-    return df_long
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# METRIC FUNCTION PROBABILITY
 
-
-
-
-
-
-# %%
-
-
-# Convert to DataFrame
-df = pd.DataFrame(df_raw)
-print(df)
-
-# Test Case 1: Basic Usage without h2h_teams and home_away
-
-df_result_1 = f_metrics_league(df, n_matches=3, h2h_teams="SKIP", home_away=False)
-print(df_result_1)
-
-df_result_1_long = convert_to_r_format(df_result_1)
-print(df_result_1_long)
-
-df_filtered = df_result_1_long.query('metric == "Points_lx"').sort_values(by='rank')
-print(df_filtered)
-
-
-
-
-# %%
-# Test Case 2: With home_away=True
-
-# Convert to DataFrame
-df = pd.DataFrame(df_raw)
-print(df)
-
-# Test Case 1: Basic Usage without h2h_teams and home_away
-
-df_result_2 = f_metrics_league(df, n_matches=3, h2h_teams="SKIP", home_away=True)
-print(df_result_2)
-
-
-df_result_2_long = convert_to_r_format(df_result_2)
-print(df_result_2_long)
-
-
-df_filtered2 = df_result_2_long.query('metric == "Points_lx"').sort_values(by='rank')
-
-# Display the filtered and sorted DataFrame
-print(df_filtered2)
-
-
-
-# %%
-# Test Case 3: With home_away=True
-
-# Convert to DataFrame
-df = pd.DataFrame(df_raw)
-print(df)
-
-# Test Case 1: Basic Usage without h2h_teams and home_away
-
-df_result_3 = f_metrics_league(df, n_matches=5, h2h_teams=["Leicester", "Chelsea"], home_away=False)
-print(df_result_3)
-
-print(df_result_3.query('n_matches_in_sample<5'))
-
-
-df_result_3_long = convert_to_r_format(df_result_3)
-print(df_result_3_long)
-
-df_filtered3 = df_result_3_long.query('metric == "Points_lx"').sort_values(by='rank')
-
-# Display the filtered and sorted DataFrame
-print(df_filtered3)
-
-
-
-
-
-# %%
 def calculate_match_probability(metrics_df, home_team, away_team, metric):
     # Filter the DataFrame for the specific metric and teams
     filtered_df = metrics_df[
@@ -387,15 +351,15 @@ def calculate_match_probability(metrics_df, home_team, away_team, metric):
     # Check if we're dealing with a Home/Away scenario by examining the unique values in 'Home_Away'
     if 'Home_Away' in filtered_df.columns and len(filtered_df['Home_Away'].unique()) > 1:
         # Home/Away scenario: get home rank for home team, away rank for away team
-        home_rank = filtered_df[(filtered_df['Team'] == home_team) & (filtered_df['Home_Away'] == "Home")]['rank'].values[0]
-        away_rank = filtered_df[(filtered_df['Team'] == away_team) & (filtered_df['Home_Away'] == "Away")]['rank'].values[0]
+        home_rank = float(filtered_df[(filtered_df['Team'] == home_team) & (filtered_df['Home_Away'] == "Home")]['rank'].values[0])
+        away_rank = float(filtered_df[(filtered_df['Team'] == away_team) & (filtered_df['Home_Away'] == "Away")]['rank'].values[0])
     else:
         # Combined scenario, or if we have single entries for each team
-        home_rank = filtered_df[filtered_df['Team'] == home_team]['rank'].values[0]
-        away_rank = filtered_df[filtered_df['Team'] == away_team]['rank'].values[0]
+        home_rank = float(filtered_df[filtered_df['Team'] == home_team]['rank'].values[0])
+        away_rank = float(filtered_df[filtered_df['Team'] == away_team]['rank'].values[0])
 
     # Calculate the rank range and spread
-    rank_range = metrics_df['rank'].max() - metrics_df['rank'].min()
+    rank_range = float(metrics_df['rank'].max() - metrics_df['rank'].min())
     rank_spread = abs(away_rank - home_rank)
 
     # Calculate probabilities
@@ -417,67 +381,19 @@ def calculate_match_probability(metrics_df, home_team, away_team, metric):
         home_perc = perc_for_best
         away_perc = perc_for_worst
 
-    # Return only the calculated probabilities for Home, Away, and Draw
+    # Return only the calculated probabilities for Home, Away, and Draw as Python floats
     return {
-        "Home": home_perc,
-        "Away": away_perc,
-        "Draw": perc_for_draw
+        "Home": float(home_perc),
+        "Away": float(away_perc),
+        "Draw": float(perc_for_draw)
     }
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# FULL MATCH
 
-# %%
-# Example usage
-result = calculate_match_probability(metrics_df=df_result_2_long, 
-                                     home_team="Leicester", away_team="Chelsea", 
-                                     metric="Points_lx")
-print(result)
-
-# Filter df_result_2_long for "Man United", "Fulham" and "Points_lx" metric
-filtered_df = df_result_2_long[
-    (df_result_2_long['Team'].isin(["Leicester", "Chelsea"])) &
-    (df_result_2_long['metric'] == "Points_lx")
-]
-
-print(filtered_df)
-
-# %%
-
-#dict of stats, function arguments and weights
-
-game_stats_config = {
-    "m1": {"metric": "Points_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
-    "m2": {"metric": "Goals_Scored_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
-    "m3": {"metric": "Goals_Conceded_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
-    "m4": {"metric": "Shots_OT_For_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
-    "m5": {"metric": "Shots_OT_Conceded_lx", "n_matches": 10, "h2h_teams": "SKIP", "home_away": False, "weight": 1.0},
-    
-    #h2h:
-    "m9": {"metric": "Points_lx", "n_matches": 5, "h2h_teams": ["home_team", "away_team"], "home_away": False, "weight": 0.5},
-    "m10": {"metric": "Goals_Scored_lx", "n_matches": 5, "h2h_teams": ["home_team", "away_team"], "home_away": False, "weight": 0.5},
-    "m11": {"metric": "Goals_Conceded_lx", "n_matches": 5, "h2h_teams": ["home_team", "away_team"], "home_away": False, "weight": 0.5},
-    
-    #home_away:
-    "m6": {"metric": "Points_lx", "n_matches": 5, "h2h_teams": "SKIP", "home_away": True, "weight": 0.5},
-    "m7": {"metric": "Goals_Scored_lx", "n_matches": 5, "h2h_teams": "SKIP", "home_away": True, "weight": 0.5},
-    "m8": {"metric": "Goals_Conceded_lx", "n_matches": 5, "h2h_teams": "SKIP", "home_away": True, "weight": 0.5},
-}
-
-
-# Convert raw data into a DataFrame
-df_input = pd.DataFrame(df_raw)
-
-# Calculate the three main data frames based on the configurations
-df_result_basic = f_metrics_league(df_input, n_matches=10, h2h_teams="SKIP", home_away=False)
-df_result_basic_long = convert_to_r_format(df_result_basic)
-
-df_result_home_away = f_metrics_league(df_input, n_matches=5, h2h_teams="SKIP", home_away=True)
-df_result_home_away_long = convert_to_r_format(df_result_home_away)
-
-
-# %%
-
-def calculate_expected_outcome(home_team, away_team, game_stats_config, df_result_basic_long, df_result_home_away_long):
+def calculate_expected_outcome(home_team, away_team, game_stats_config, df_result_basic_long, df_result_home_away_long, df_input):
     expected_outcome = {
         "Home": 0,
         "Away": 0,
@@ -554,117 +470,138 @@ def calculate_expected_outcome(home_team, away_team, game_stats_config, df_resul
     return expected_outcome
 
 
-# Example usage with the precomputed data frames
-expected_outcome = calculate_expected_outcome(
-    "Leicester", "Chelsea", game_stats_config,
-    df_result_basic_long, df_result_home_away_long
-)
-print(expected_outcome)
 
-# %%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# import schedules
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# LOAD DATA
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import os
-import pandas as pd
-from sqlalchemy import create_engine
 
-#define table to query
-table_name_to_query = "premier_league_fixtures_current_lambda"
-
-# Set up environment variables or replace these with your database details
-db_host = os.getenv("DB_HOST", "your_db_host")
-db_name = os.getenv("DB_NAME", "your_db_name")
-db_user = os.getenv("DB_USER", "your_db_user")
-db_password = os.getenv("DB_PASSWORD", "your_db_password")
-db_port = os.getenv("DB_PORT", "5432")  # Default PostgreSQL port is 5432
-
-# Create the SQLAlchemy engine to connect to the database
-engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
-
-# Define the query (adjust the table name to your actual table)
-query = f"SELECT * FROM {table_name_to_query} "
-
-# Fetch data into a pandas DataFrame
-try:
-    with engine.connect() as connection:
-        df_schedule = pd.read_sql(query, connection)
-        print("Data fetched successfully:")
-        print(df)
-except Exception as e:
-    print(f"Error querying the database: {e}")
-finally:
-    # Dispose of the engine connection
-    engine.dispose()
-
-# %%
-
-from datetime import datetime
-
-# Convert the 'Date' column to datetime format
-df_schedule['Date'] = pd.to_datetime(df_schedule['Date'], format='%d/%m/%Y %H:%M')
-
-# Get the current date and time
-now = datetime.now()
-
-# Filter for games that have not yet been played
-upcoming_games = df_schedule[df_schedule['Date'] > now]
-
-# Display the filtered DataFrame
-print(upcoming_games)
+# Lambda handler
+def lambda_handler(event, context):
+    print("Lambda function started")
 
 
-# %%
-
-from datetime import datetime
-
-# Convert the 'Date' column to datetime format
-df_schedule['Date'] = pd.to_datetime(df_schedule['Date'], format='%d/%m/%Y %H:%M')
-
-# Get the current date and time
-now = datetime.now()
-
-# Define a new DataFrame to store the upcoming games with calculated probabilities
-upcoming_games = df_schedule[df_schedule['Date'] > now].copy()
-
-# Initialize empty lists to store the probabilities for Home, Away, and Draw
-home_probs = []
-away_probs = []
-draw_probs = []
-
-# Initialize a counter to track progress
-total_games = len(upcoming_games)
-counter = 0
-
-# Iterate over each upcoming game
-for _, row in upcoming_games.iterrows():
-    home_team = row['Home Team']
-    away_team = row['Away Team']
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # HISTORIC DATA
     
-    # Calculate expected outcome
-    outcome = calculate_expected_outcome(
-        home_team=home_team,
-        away_team=away_team,
-        game_stats_config=game_stats_config,
-        df_result_basic_long=df_result_basic_long,
-        df_result_home_away_long=df_result_home_away_long
-    )
+    #define table to query
+    table_name_to_query1 = "premier_league_data_current_lambda"
+    table_name_to_query2 = "premier_league_data_historical"
+
+    df1 = get_data_from_db(table_name_to_query1)
+    df2 = get_data_from_db(table_name_to_query2)
     
-    # Append the calculated probabilities to the respective lists
-    home_probs.append(outcome["Home"])
-    away_probs.append(outcome["Away"])
-    draw_probs.append(outcome["Draw"])
+    # bind the 2 tables after applying the function f_select_columns_historical_data to both 
+    df1 = f_select_columns_historical_data(df1)
+    df2 = f_select_columns_historical_data(df2)
+    df_raw = pd.concat([df1, df2])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # SCHEDULE DATA
+
+    #define table to query
+    table_name_to_query_schedules = "premier_league_fixtures_current_lambda"
+    table_name_to_query_translations = "team_name_translate"
+   
+    df_schedule = get_data_from_db(table_name_to_query_schedules)
+    df_translate = get_data_from_db(table_name_to_query_translations)
+
+
+
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # RUN CODE
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+    # Convert raw data into a DataFrame
+    df_input = pd.DataFrame(df_raw)
+
+    # Calculate the three main data frames based on the configurations
+    df_result_basic = f_metrics_league(df_input, n_matches=10, h2h_teams="SKIP", home_away=False)
+    df_result_basic_long = convert_to_r_format(df_result_basic)
+
+    df_result_home_away = f_metrics_league(df_input, n_matches=5, h2h_teams="SKIP", home_away=True)
+    df_result_home_away_long = convert_to_r_format(df_result_home_away)
+
+    # Convert the 'Date' column to datetime format
+    df_schedule['Date'] = pd.to_datetime(df_schedule['Date'], format='%d/%m/%Y %H:%M')
+
+    # Get the current date and time
+    now = datetime.now()
+    two_weeks_ahead = now + timedelta(weeks=2)
+
+    # Define a new DataFrame to store the upcoming games with calculated probabilities
+    upcoming_games = df_schedule[(df_schedule['Date'] > now) & (df_schedule['Date'] <= two_weeks_ahead)].copy()
     
-    # Increment the counter and print progress
-    counter += 1
-    print(f"Processed game {counter} of {total_games} - {home_team} vs {away_team}")
+    # drop column team_short
+    df_translate = df_translate.drop(columns=['team_short'])
+    
+    # Join the team name translations HOME
+    upcoming_games = upcoming_games.merge(df_translate, left_on="Home Team", right_on="team_name_from_schedule_data", how="left")
+    
+    #rename column team to HomeTeam and drop team_name_from_schedule_data
+    upcoming_games = upcoming_games.rename(columns={"team": "HomeTeam"})    
+    upcoming_games = upcoming_games.drop(columns=['team_name_from_schedule_data'])
+    
+    # Join the team name translations AWAY
+    upcoming_games = upcoming_games.merge(df_translate, left_on="Away Team", right_on="team_name_from_schedule_data", how="left")
+    upcoming_games = upcoming_games.rename(columns={"team": "AwayTeam"})    
+    upcoming_games = upcoming_games.drop(columns=['team_name_from_schedule_data'])
+    
+
+    # Initialize empty lists to store the probabilities for Home, Away, and Draw
+    home_probs = []
+    away_probs = []
+    draw_probs = []
+
+    # Initialize a counter to track progress
+    total_games = len(upcoming_games)
+    counter = 0
+
+    # Iterate over each upcoming game
+    for _, row in upcoming_games.iterrows():
+        home_team = row['HomeTeam']
+        away_team = row['AwayTeam']
+        
+        # Calculate expected outcome
+        outcome = calculate_expected_outcome(
+            home_team=home_team,
+            away_team=away_team,
+            game_stats_config=game_stats_config,
+            df_result_basic_long=df_result_basic_long,
+            df_result_home_away_long=df_result_home_away_long,
+            df_input=df_input
+        )
+        
+        # Append the calculated probabilities to the respective lists
+        home_probs.append(outcome["Home"])
+        away_probs.append(outcome["Away"])
+        draw_probs.append(outcome["Draw"])
+        
+        # Increment the counter and print progress
+        counter += 1
+        print(f"Processed game {counter} of {total_games} - {home_team} vs {away_team}")
 
 
-# Add the probabilities as new columns in the DataFrame
-upcoming_games['Home Win Probability (%)'] = home_probs
-upcoming_games['Away Win Probability (%)'] = away_probs
-upcoming_games['Draw Probability (%)'] = draw_probs
+    # Add the probabilities as new columns in the DataFrame
+    upcoming_games['Home Win Probability (%)'] = home_probs
+    upcoming_games['Away Win Probability (%)'] = away_probs
+    upcoming_games['Draw Probability (%)'] = draw_probs
 
-# Display the updated DataFrame
-print(upcoming_games)
+
+    upcoming_games['TimeStamp_Uploaded'] = pd.Timestamp.now()
+
+    table_name = "premier_league_fixtures_historical_enriched"
+    upload_df_to_postgres(upcoming_games, table_name, if_exists_rule = "append")
+
+
+
+
+
+    print("Lambda function completed without errors.")
+    return {"statusCode": 200, "body": "Data upload completed successfully"}

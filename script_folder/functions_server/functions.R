@@ -317,6 +317,37 @@ f_calculate_la_liga_table <- function(df) {
 
 
 
+f_prepare_schedule_data <- function(df, enriched = F) {
+  df_out <- df %>% 
+    mutate(
+      utc_date = dmy_hm(Date, tz = "UTC"),
+      utc_time = paste0(hour(ymd_hms(utc_date)), ":", ifelse(minute(ymd_hms(utc_date))==0, "00", minute(ymd_hms(utc_date)))),
+      Date_time_local = with_tz(utc_date, tzone = Sys.timezone()),
+      Date_local = Date_time_local %>% as.Date(format = "%d/%m/%Y"),
+      Time_local = paste0(hour(ymd_hms(Date_time_local)), ":", ifelse(minute(ymd_hms(Date_time_local))==0, "00", minute(ymd_hms(Date_time_local))))
+    ) %>% 
+    mutate(
+      Time = Time_local,
+      Date = Date_local %>% as.Date(format = "%d/%m/%Y"),
+      HomeTeam_original = `Home Team`,
+      AwayTeam_original = `Away Team`
+    ) 
+    
+    if(!enriched){
+      df_out <- df_out %>% 
+        # Join home team names
+        left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("HomeTeam_original"="Team_name_from_schedule_data")) %>% 
+        rename(HomeTeam = Team) %>%
+        # Join away team names
+        left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("AwayTeam_original"="Team_name_from_schedule_data")) %>% 
+        rename(AwayTeam = Team) 
+    } else {}
+  
+  return(df_out)
+  
+}
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # DB FUNCTIONS ----
 
@@ -498,7 +529,7 @@ fetch_table_all_bets <- function(r6) {
 
 
 update_n_bets_in_db <- function(user_id, bets_df, bets_week_starting, match_id_input) {
-
+  
   bets_used <- bets_df %>% 
     filter((is.na(bet_concluded))) %>% 
     nrow()
@@ -1507,18 +1538,6 @@ f_your_bets_table <- function(r6){
 
 f_format_all_bets <- function(r6){
   
-  df_matches <- r6$data$pl_historic %>% 
-    mutate(
-      match_id = paste0(HomeTeam, "-", AwayTeam , "-", Season_ending_year),
-      winning_team = ifelse(FTR == "H", HomeTeam,
-                            ifelse(FTR == "A", HomeTeam,"DRAW")),
-      Date = as.Date(as.Date(Date, format = "%d/%m/%Y"), "%Y-%m-%d")
-    ) %>% 
-    
-    select(
-      match_id, winning_team, HomeTeam, AwayTeam, Date, Time
-    ) 
-  
   df_schedule <- r6$data$pl_schedule %>% 
     mutate(
       match_id = paste0(HomeTeam, "-", AwayTeam , "-", current_season_ending),
@@ -1527,39 +1546,35 @@ f_format_all_bets <- function(r6){
       match_id, HomeTeam, AwayTeam, Date, Time
     )
   
+  team_winning_df <- r6$data$pl_historic %>% filter(Season_ending_year == max(Season_ending_year)) %>% 
+    mutate(
+      match_id = paste0(HomeTeam, "-", AwayTeam , "-", current_season_ending),
+      winning_team = ifelse(FTR == "H", HomeTeam, 
+                            ifelse(FTR == "A", AwayTeam, 
+                                   ifelse(FTR == "D", "DRAW", NA)))
+    ) %>% 
+    select(match_id, winning_team)
+  
   
   df_all_bets = r6$user_info$bets %>% 
     mutate(
       placed_local = with_tz(placed, tzone = Sys.timezone()),
       placed = format(placed_local, "%Y-%m-%d %H:%M"),
-      
-      # bet_concluded = ifelse(is.null(bet_concluded), "Unknown", bet_concluded)
-      
     ) %>% 
     arrange(placed) %>% 
-    
+    select(-placed_local, -bet_id)
+  
+  
+  df_use <- 
+    df_all_bets %>% 
     left_join(
-      df_matches,
+      df_schedule,
       by = c("match_id" = "match_id")
     ) %>% 
-    
-    mutate(
-      bet_concluded2 = ifelse(is.na(winning_team),winning_team,
-                              ifelse(winning_team == bet, odds, -1)),   # NO NEED WHEN CALCULATED FROM THE DB
-      
-      bet_concluded = ifelse(is.na(bet_concluded2), NA, bet_concluded2)  # NULL OR NA?
-    ) %>%
-    select(-placed_local, -bet_id, -bet_concluded2)
+    left_join(
+      team_winning_df
+    )
   
-  df_use <- rbind(
-    df_all_bets %>% filter(!is.na(HomeTeam)),
-    df_all_bets %>% filter(is.na(HomeTeam)) %>% 
-      select(-HomeTeam, -AwayTeam, -Date, -Time) %>% 
-      left_join(
-        df_schedule,
-        by = c("match_id" = "match_id")
-      )
-  )
   
   
   return(df_use)

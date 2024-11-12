@@ -1,14 +1,9 @@
-import pandas as pd
-import requests
-from io import StringIO
-from sqlalchemy import create_engine
-import os
 
-# Fetch data from URL and return as a DataFrame
-def fetch_data_from_url(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return pd.read_csv(StringIO(response.text))
+
+import os
+import pandas as pd
+from sqlalchemy import create_engine
+
 
 # Upload DataFrame to PostgreSQL
 def upload_df_to_postgres(df, table_name):
@@ -23,8 +18,15 @@ def upload_df_to_postgres(df, table_name):
     df.to_sql(table_name, engine, schema="public", if_exists="replace", index=False)
     print(f"Data uploaded to PostgreSQL table '{table_name}' successfully.")
     engine.dispose()
+
+# Lambda handler
+
+def lambda_handler(event, context):
+    print("Lambda function started")
     
-def get_data_from_db(table_name_to_query):
+    #define table to query
+    table_name_to_query = "users"
+
     # Set up environment variables or replace these with your database details
     db_host = os.getenv("DB_HOST", "your_db_host")
     db_name = os.getenv("DB_NAME", "your_db_name")
@@ -41,11 +43,26 @@ def get_data_from_db(table_name_to_query):
     # Fetch data into a pandas DataFrame
     try:
         with engine.connect() as connection:
-            df = pd.read_sql(query, connection)
+            df_users = pd.read_sql(query, connection)
             print("Data fetched successfully:")
     except Exception as e:
         print(f"Error querying the database: {e}")
     finally:
         # Dispose of the engine connection
         engine.dispose()
-    return df
+    
+
+    df_users['bets_available'] = 10
+    df_users['bets_week_starting'] = 10
+    
+    df_users['TimeStamp_Bets_Updated'] = pd.Timestamp.now()
+
+    table_name = "users"
+    upload_df_to_postgres(df_users, table_name)
+
+
+
+
+
+    print("Lambda function completed without errors.")
+    return {"statusCode": 200, "body": "Data upload completed successfully"}
