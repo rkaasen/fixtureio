@@ -533,10 +533,11 @@ def lambda_handler(event, context):
 
     # Get the current date and time
     now = datetime.now()
+    one_weeks_ahead = now + timedelta(weeks=1)
     two_weeks_ahead = now + timedelta(weeks=2)
 
     # Define a new DataFrame to store the upcoming games with calculated probabilities
-    upcoming_games = df_schedule[(df_schedule['Date'] > now) & (df_schedule['Date'] <= two_weeks_ahead)].copy()
+    upcoming_games = df_schedule[(df_schedule['Date'] > one_weeks_ahead) & (df_schedule['Date'] <= two_weeks_ahead)].copy()
     
     # drop column team_short
     df_translate = df_translate.drop(columns=['team_short'])
@@ -581,15 +582,21 @@ def lambda_handler(event, context):
 
         # check if outcome home is lower than 15% and if so, set it to 15% + random
         if outcome["Home"] < 15:
-            outcome["Home"] = 15 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+            outcome["Home"] = 16 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+        else:
+            outcome["Home"] = outcome["Home"] + 2
 
         # check if outcome Away is lower than 15% and if so, set it to 15% + random
         if outcome["Away"] < 15:
-            outcome["Away"] = 15 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+            outcome["Away"] = 16 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+        else:
+            outcome["Away"] = outcome["Away"] + 2
             
          # check if outcome Draw is lower than 19% and if so, set it to 19% + random
         if outcome["Draw"] < 19:
-            outcome["Draw"] = 19 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+            outcome["Draw"] = 20 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+        else:
+            outcome["Draw"] = outcome["Draw"] + 1
             
         
         # Append the calculated probabilities to the respective lists
@@ -606,6 +613,11 @@ def lambda_handler(event, context):
     upcoming_games['Home Win Probability (%)'] = home_probs
     upcoming_games['Away Win Probability (%)'] = away_probs
     upcoming_games['Draw Probability (%)'] = draw_probs
+    
+    # Set 0 as the "changed_since_start_xx"
+    upcoming_games['changed_since_start_home'] = 0
+    upcoming_games['changed_since_start_away'] = 0
+    upcoming_games['changed_since_start_draw'] = 0
 
 
     upcoming_games['TimeStamp_Uploaded'] = pd.Timestamp.now()

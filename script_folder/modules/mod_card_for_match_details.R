@@ -462,8 +462,15 @@ card_for_match_details_Server <- function(id, r6) {
                               match_id = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending), 
                               user_id = r6$user_info$user_id)
         
-        r6$user_info$bets <- fetch_table_all_bets(r6)
-        update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen())
+        # r6$user_info$bets <- fetch_table_all_bets(r6)
+        
+        l_after_update <- full_update_after_bet_place(r6$user_info$user_id, 
+                                                      r6$user_info$bets, 
+                                                      r6$user_info$bets_week_starting, 
+                                                      match_id_chosen())
+        r6$odds$pl <- l_after_update[[2]]
+        r6$user_info$bets <-l_after_update[[3]]
+        # update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen())
         
         
         output$your_bets_table <- renderReactable({
@@ -471,8 +478,9 @@ card_for_match_details_Server <- function(id, r6) {
         })
         
         # update pie
-        l_bets <- fetch_total_bets_on_match(match_id_chosen())
-        
+        # l_bets <- fetch_total_bets_on_match(match_id_chosen())
+        l_bets <- l_after_update[[1]]
+
         output$pie_chart <- renderPlotly({
           f_pie_n_bets(
             list_n_bets = l_bets, 
@@ -488,6 +496,8 @@ card_for_match_details_Server <- function(id, r6) {
     
     
     observeEvent(input$cancel, ignoreInit = T, {
+      
+      print("cancel")
       
       
       bet_open <- f_match_open_for_betting() %>% 
@@ -505,16 +515,22 @@ card_for_match_details_Server <- function(id, r6) {
         #CANCEL BET
         cancel_bet_in_db(bet_id = input$cancel)
         
-        r6$user_info$bets <- fetch_table_all_bets(r6)
-        update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen)
+        # r6$user_info$bets <- fetch_table_all_bets(r6)
+        l_after_update <- full_update_after_bet_place(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen())
+        r6$odds$pl <- l_after_update[[2]]
+        r6$user_info$bets <-l_after_update[[3]]
+        
+        print("updated r6")
+        
+        # update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen)
         
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
         })
-        
-        
+
         # update pie
-        l_bets <- fetch_total_bets_on_match(match_id_chosen)
+        # l_bets <- fetch_total_bets_on_match(match_id_chosen)
+        l_bets <- l_after_update[[1]]
         
         output$pie_chart <- renderPlotly({
           f_pie_n_bets(

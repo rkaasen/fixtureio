@@ -52,8 +52,8 @@ table_name_to_query = "premier_league_data_current_lambda"
 table_name_to_query = "premier_league_data_historical"
 table_name_to_query = "premier_league_fixtures_current_lambda"
 table_name_to_query = "users"
-table_name_to_query = "bets"
-# table_name_to_query = "premier_league_fixtures_current_enriched"
+# table_name_to_query = "bets"
+table_name_to_query = "premier_league_fixtures_historical_enriched"
 # table_name_to_query = "team_name_translate"
 
 
@@ -82,7 +82,7 @@ finally:
     # Dispose of the engine connection
     engine.dispose()
 
-df.columns
+
 # %%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -93,6 +93,7 @@ import os
 
 # Define the table name you want to delete
 table_name = "premier_league_fixtures_current_enriched"
+
 
 import psycopg2
 import os

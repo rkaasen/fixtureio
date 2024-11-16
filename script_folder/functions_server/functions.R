@@ -474,15 +474,16 @@ write_data_to_db_bets <- function(bet, odds, match_id, user_id, bet_concluded = 
   # Ensure connection closes at the end of the function, even if an error occurs
   on.exit(dbDisconnect(con), add = TRUE)
   
+  
   # SQL query for parameterized insertion
   sql <- "
-    INSERT INTO bets (bet, odds, placed, bet_concluded, match_id, user_id, cancelled)
-    VALUES ($1, $2, NOW(), $3, $4, $5, $6)
+    INSERT INTO bets (bet, odds, placed, bet_concluded, match_id, user_id, cancelled, bet_id)
+    VALUES ($1, $2, NOW(), $3, $4, $5, $6, uuid_generate_v4())
   "
   
   # Execute the query with parameters
   tryCatch({
-    dbExecute(con, sql, params = list(bet, odds, if (is.null(bet_concluded)) NA else bet_concluded, match_id, user_id, cancelled))
+    dbExecute(con, sql, params = list(bet, odds, if (is.null(bet_concluded)) NA else bet_concluded, match_id, user_id, cancelled ))
     # print("New bet added successfully!")
   }, error = function(e) {
     print(paste("Error adding bet:", e$message))
@@ -506,6 +507,7 @@ cancel_bet_in_db <- function(bet_id,  new_cancelled = TRUE) {
   
   # Ensure connection closes at the end of the function, even if an error occurs
   on.exit(dbDisconnect(con), add = TRUE)
+
   
   # Build the SQL update query
   sql <- paste0(
@@ -516,7 +518,7 @@ cancel_bet_in_db <- function(bet_id,  new_cancelled = TRUE) {
   # Execute the query
   tryCatch({
     dbExecute(con, sql)
-    # showNotification("Bet updated successfully!")
+    showNotification("Bet updated successfully!")
   }, error = function(e) {
     # showNotification(paste("Error updating bet:", e$message), type = "error")
   })
@@ -546,112 +548,112 @@ format_bets_for_match_bets <- function(bets, match_id_input) {
   
 }
 
-fetch_table_all_bets <- function(r6) {
-  
-  # Establish the connection
-  con <- dbConnect(
-    RPostgres::Postgres(),
-    host = Sys.getenv("DB_HOST"),
-    dbname = Sys.getenv("DB_NAME"),
-    user = Sys.getenv("DB_USER"),
-    password = Sys.getenv("DB_PASSWORD"),
-    port = Sys.getenv("DB_PORT", "5432")
-  )
-  
-  # Ensure connection closes at the end of the function, even if an error occurs
-  on.exit(dbDisconnect(con), add = TRUE)
-  
-  query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
-  all_bets <- dbGetQuery(con, query, 
-                         list(r6$user_info$user_id
-                         )
-  ) 
-  
-  
-  all_bets <- all_bets %>% 
-    mutate(
-      placed_local = with_tz(placed, tzone = Sys.timezone()),
-      placed = format(placed_local, "%Y-%m-%d %H:%M")
-    ) %>% 
-    arrange(placed) %>% 
-    select(-placed_local)
-  
-  return(all_bets)
-  
-}
+# fetch_table_all_bets <- function(r6) {
+#   
+#   # Establish the connection
+#   con <- dbConnect(
+#     RPostgres::Postgres(),
+#     host = Sys.getenv("DB_HOST"),
+#     dbname = Sys.getenv("DB_NAME"),
+#     user = Sys.getenv("DB_USER"),
+#     password = Sys.getenv("DB_PASSWORD"),
+#     port = Sys.getenv("DB_PORT", "5432")
+#   )
+#   
+#   # Ensure connection closes at the end of the function, even if an error occurs
+#   on.exit(dbDisconnect(con), add = TRUE)
+#   
+#   query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
+#   all_bets <- dbGetQuery(con, query, 
+#                          list(r6$user_info$user_id
+#                          )
+#   ) 
+#   
+#   
+#   all_bets <- all_bets %>% 
+#     mutate(
+#       placed_local = with_tz(placed, tzone = Sys.timezone()),
+#       placed = format(placed_local, "%Y-%m-%d %H:%M")
+#     ) %>% 
+#     arrange(placed) %>% 
+#     select(-placed_local)
+#   
+#   return(all_bets)
+#   
+# }
 
-fetch_total_bets_on_match <- function(match_id_input) {
-  
-  # Establish the connection
-  con <- dbConnect(
-    RPostgres::Postgres(),
-    host = Sys.getenv("DB_HOST"),
-    dbname = Sys.getenv("DB_NAME"),
-    user = Sys.getenv("DB_USER"),
-    password = Sys.getenv("DB_PASSWORD"),
-    port = Sys.getenv("DB_PORT", "5432")
-  )
-  
-  # Ensure connection closes at the end of the function, even if an error occurs
-  on.exit(dbDisconnect(con), add = TRUE)
-  
-  query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
-  all_bets <- dbGetQuery(con, query)
-
-  
-  
-  match_bets <- all_bets %>% filter(match_id == match_id_input)
-  
-  split_text <- strsplit(match_id_input, "-")[[1]]
-  home_team_input <- split_text[1]  
-  away_team_input <- split_text[2]  
-
-  
-  match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
-  match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
-  match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
-  
-  l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
-  return(l_bets)
-}
-
-
+# fetch_total_bets_on_match <- function(match_id_input) {
+#   
+#   # Establish the connection
+#   con <- dbConnect(
+#     RPostgres::Postgres(),
+#     host = Sys.getenv("DB_HOST"),
+#     dbname = Sys.getenv("DB_NAME"),
+#     user = Sys.getenv("DB_USER"),
+#     password = Sys.getenv("DB_PASSWORD"),
+#     port = Sys.getenv("DB_PORT", "5432")
+#   )
+#   
+#   # Ensure connection closes at the end of the function, even if an error occurs
+#   on.exit(dbDisconnect(con), add = TRUE)
+#   
+#   query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
+#   all_bets <- dbGetQuery(con, query)
+# 
+#   
+#   
+#   match_bets <- all_bets %>% filter(match_id == match_id_input)
+#   
+#   split_text <- strsplit(match_id_input, "-")[[1]]
+#   home_team_input <- split_text[1]  
+#   away_team_input <- split_text[2]  
+# 
+#   
+#   match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
+#   match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
+#   match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
+#   
+#   l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
+#   return(l_bets)
+# }
 
 
 
-update_n_bets_in_db <- function(user_id, bets_df, bets_week_starting, match_id_input) {
-  
-  bets_used <- bets_df %>% 
-    filter((is.na(bet_concluded))) %>% 
-    nrow()
-  
-  bets_available <- bets_week_starting - bets_used
-  
-  
-  # Establish the connection
-  con <- dbConnect(
-    RPostgres::Postgres(),
-    host = Sys.getenv("DB_HOST"),
-    dbname = Sys.getenv("DB_NAME"),
-    user = Sys.getenv("DB_USER"),
-    password = Sys.getenv("DB_PASSWORD"),
-    port = Sys.getenv("DB_PORT", "5432")
-  )
-  
-  # Ensure connection closes at the end of the function, even if an error occurs
-  on.exit(dbDisconnect(con), add = TRUE)
-  
-  # Parameterized SQL update query
-  sql <- "UPDATE users SET bets_available = $1 WHERE user_id = $2"
-  
-  # Execute the query
-  tryCatch({
-    dbExecute(con, sql, params = list(bets_available, user_id))
-    message("Bet availability updated successfully!")
-  }, error = function(e) {
-    message("Error updating bet availability: ", e$message)
-  })
-}
+
+
+# update_n_bets_in_db <- function(user_id, bets_df, bets_week_starting, match_id_input) {
+#   
+#   bets_used <- bets_df %>% 
+#     filter((is.na(bet_concluded))) %>% 
+#     nrow()
+#   
+#   bets_available <- bets_week_starting - bets_used
+#   
+#   
+#   # Establish the connection
+#   con <- dbConnect(
+#     RPostgres::Postgres(),
+#     host = Sys.getenv("DB_HOST"),
+#     dbname = Sys.getenv("DB_NAME"),
+#     user = Sys.getenv("DB_USER"),
+#     password = Sys.getenv("DB_PASSWORD"),
+#     port = Sys.getenv("DB_PORT", "5432")
+#   )
+#   
+#   # Ensure connection closes at the end of the function, even if an error occurs
+#   on.exit(dbDisconnect(con), add = TRUE)
+#   
+#   # Parameterized SQL update query
+#   sql <- "UPDATE users SET bets_available = $1 WHERE user_id = $2"
+#   
+#   # Execute the query
+#   tryCatch({
+#     dbExecute(con, sql, params = list(bets_available, user_id))
+#     message("Bet availability updated successfully!")
+#   }, error = function(e) {
+#     message("Error updating bet availability: ", e$message)
+#   })
+# }
 
 update_last_logged_in_db <- function(user_id) {
   
@@ -680,6 +682,220 @@ update_last_logged_in_db <- function(user_id) {
     message("Error updating bet availability: ", e$message)
   })
 }
+
+
+
+
+
+full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, match_id_input) {
+  
+  if(F){
+    user_id = r6$user_info$user_id
+    bets_df = r6$user_info$bets
+    bets_week_starting = r6$user_info$bets_week_starting
+    match_id_input = "Ipswich-Man United-2025"
+  }
+  
+  
+  bets_used <- bets_df %>% 
+    filter((is.na(bet_concluded))) %>% 
+    nrow()
+  
+  bets_available <- bets_week_starting - bets_used
+  
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)  
+  
+  
+  # DOWNLOAD ALL BETS
+  query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query)
+  
+  # Schedules ENRICHED:
+  enriched_raw_from_df <- fetch_data_from_db("SELECT * FROM premier_league_fixtures_historical_enriched")
+  
+  raw_pl_schedules_enriched <- enriched_raw_from_df %>% 
+    mutate(
+      Date = format(as.POSIXct(Date, format = "%Y-%m-%d %H:%M:%S"), "%d/%m/%Y %H:%M"),
+      season_ending = f_calc_season_ending(Date),
+      match_id = paste0(HomeTeam, "-", AwayTeam, "-", season_ending)
+    )  
+  
+  raw_pl_schedules_enriched_first_upload <- 
+    raw_pl_schedules_enriched %>% 
+    filter(match_id == match_id_input) %>% 
+    group_by(match_id) %>%
+    filter(TimeStamp_Uploaded == min(TimeStamp_Uploaded)) %>% 
+    ungroup() %>% 
+    f_prepare_schedule_data(enriched = T)
+  
+  raw_pl_schedules_enriched_last_upload <- 
+    raw_pl_schedules_enriched %>% 
+    filter(match_id == match_id_input) %>% 
+    group_by(match_id) %>%
+    filter(TimeStamp_Uploaded == max(TimeStamp_Uploaded)) %>% 
+    ungroup() %>% 
+    f_prepare_schedule_data(enriched = T)
+  
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # CODE FOR PIE:
+  
+  match_bets <- all_bets %>% filter(match_id == match_id_input)
+  
+  split_text <- strsplit(match_id_input, "-")[[1]]
+  home_team_input <- split_text[1]  
+  away_team_input <- split_text[2]  
+  
+  
+  match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
+  match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
+  match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
+  
+  
+  if(F){
+    match_bets_home <- 1
+    match_bets_away <- 0
+    match_bets_draw <- 0
+  }
+  
+  
+  l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
+  
+  
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # CODE FOR UPDATING USER BETS IN r6
+  
+  query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query, 
+                         list(r6$user_info$user_id
+                         )
+  ) 
+  
+  
+  all_bets <- all_bets %>% 
+    mutate(
+      placed_local = with_tz(placed, tzone = Sys.timezone()),
+      placed = format(placed_local, "%Y-%m-%d %H:%M")
+    ) %>% 
+    arrange(placed) %>% 
+    select(-placed_local)
+  
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Update odds
+  
+  if(sum(l_bets)>0){
+    
+    df_with_new_odds <- 
+      raw_pl_schedules_enriched_first_upload %>% 
+      filter(match_id == match_id_input) %>% 
+      left_join(
+        raw_pl_schedules_enriched_last_upload %>% 
+          mutate(
+            latest_odds_home = 100/`Home Win Probability (%)`,
+            latest_odds_draw = 100/`Draw Probability (%)`,
+            latest_odds_away = 100/`Away Win Probability (%)`
+          ) %>% 
+          select(match_id, latest_odds_home, latest_odds_draw, latest_odds_away)
+      ) %>% 
+      
+      mutate(
+        total_n_odds_match = sum(l_bets),
+        n_odds_home = match_bets_home,
+        n_odds_draw = match_bets_draw,
+        n_odds_away = match_bets_away,
+        
+        perc_to_distribute = 2*log(total_n_odds_match) + total_n_odds_match/100,
+        
+        initial_odds_home = 100/`Home Win Probability (%)`,
+        initial_odds_draw = 100/`Draw Probability (%)`,
+        initial_odds_away = 100/`Away Win Probability (%)`,
+        
+        payout_if_home_win = n_odds_home * latest_odds_home,
+        payout_if_draw_win = n_odds_draw * latest_odds_draw,
+        payout_if_away_win = n_odds_away * latest_odds_away,
+        payout_total = payout_if_home_win + payout_if_draw_win + payout_if_away_win,
+        
+        payout_perc_if_home_win = 100 * payout_if_home_win / payout_total,
+        payout_perc_if_draw_win = 100 * payout_if_draw_win / payout_total,
+        payout_perc_if_away_win = 100 * payout_if_away_win / payout_total,
+        
+        perc_correction_odds_home = (33 - payout_perc_if_home_win) * perc_to_distribute/100,
+        perc_correction_odds_draw = (33 - payout_perc_if_draw_win) * perc_to_distribute/100,
+        perc_correction_odds_away = (33 - payout_perc_if_away_win) * perc_to_distribute/100,
+        
+        new_odds_home = 100/(`Home Win Probability (%)` - perc_correction_odds_home),
+        new_odds_draw = 100/(`Draw Probability (%)` - perc_correction_odds_draw),
+        new_odds_away = 100/(`Away Win Probability (%)` - perc_correction_odds_away),
+      )
+    
+    df_to_upload <- df_with_new_odds %>% 
+      mutate(
+        changed_since_start_home = new_odds_home - 100/`Home Win Probability (%)`,
+        changed_since_start_draw = new_odds_draw - 100/`Draw Probability (%)`,
+        changed_since_start_away = new_odds_away - 100/`Away Win Probability (%)`,
+        
+        `Home Win Probability (%)` = `Home Win Probability (%)` - perc_correction_odds_home,
+        `Draw Probability (%)` = `Draw Probability (%)` - perc_correction_odds_draw,
+        `Away Win Probability (%)` = `Away Win Probability (%)` - perc_correction_odds_away,
+        
+        TimeStamp_Uploaded = as_datetime(Sys.time(), tz = "UTC")
+      ) %>% 
+      select(enriched_raw_from_df %>% names())
+    
+    r6_update_odds_pl <- df_to_upload
+    
+    dbWriteTable(
+      conn = con,
+      name = "premier_league_fixtures_historical_enriched",
+      value = r6_update_odds_pl,
+      append = TRUE,
+      row.names = FALSE
+    )
+    
+  }
+  else{
+    r6_update_odds_pl <- enriched_raw_from_df
+  }
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # UPDATE N BETS FOR USER:
+  
+  # Parameterized SQL update query
+  sql <- "UPDATE users SET bets_available = $1 WHERE user_id = $2"
+  
+  # Execute the query
+  tryCatch({
+    dbExecute(con, sql, params = list(bets_available, user_id))
+    message("Bet availability updated successfully!")
+  }, error = function(e) {
+    message("Error updating bet availability: ", e$message)
+  })
+  
+  
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  lout <- list(
+    l_bets,
+    r6_update_odds_pl,
+    all_bets
+  )
+  
+  return(lout)
+  
+}
+
 
 
 
@@ -1085,7 +1301,7 @@ f_plot_winning_prediction_percent <- function(Home_rank, Away_rank, range, Home_
         plot.background = element_rect(fill='transparent', color=NA),
         # axis.text = element_text( family = "Ahronbdgg"),
         panel.border = element_blank()
-
+        
       )
     
   } else {
@@ -1575,7 +1791,7 @@ f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home"
           y = 1.27,  # Increase this value to add more space above the pie chart
           font = list(family = "Ahronbdgg", size = 20) # Font for "Total bets on game" text
         ),
-      
+        
         showlegend = FALSE,             # Hide the legend
         paper_bgcolor = 'rgba(0, 0, 0, 0)', # Transparent background
         plot_bgcolor = 'rgba(0, 0, 0, 0)'   # Transparent plot background
@@ -1657,6 +1873,7 @@ f_your_bets_table <- function(r6){
   df_use <- format_bets_for_match_bets(r6$user_info$bets, 
                                        paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending))
   
+  df_use %>% print()
   r <- reactable(df_use, 
                  columns = list(
                    bet = colDef(name = "BET", minWidth = 250, align = "left", style = list(fontSize = "16px"), vAlign = "center"),
@@ -1777,8 +1994,8 @@ f_all_bets_table <- function(r6){
                    
                    Status = colDef(style = list(fontSize = "13px"), align = "center",minWidth = 110 , vAlign = "center",
                                    cell = reactablefmtr::pill_buttons( data =df_use,
-                                     color_ref  = "col_def",
-                                     text_color = "white"  # White text color for contrast
+                                                                       color_ref  = "col_def",
+                                                                       text_color = "white"  # White text color for contrast
                                    )
                    ),
                    
