@@ -8,8 +8,8 @@ card_for_match_details_UI <- function(id) {
       div(class = "full-page-spinner", tags$img(src = "spinner.gif"))
     ),
     
-    
-    actionButton(inputId = NS(id, "external_toggle"), label = "Match Stats", class = "reactable-button"),
+    # 
+    # actionButton(inputId = NS(id, "external_toggle"), label = "Match Stats", class = "reactable-button"),
     
     hidden(
       div(
@@ -157,10 +157,11 @@ card_for_match_details_UI <- function(id) {
                                             reactableOutput( NS(id,"your_bets_table"))
                                      ),
                                      # hidden(
-                                     column(7, id = NS(id, "no_user_info"),
-                                            h3("Log in to use betting")
+                                     column(12, id = NS(id, "no_user_info"),
+                                            h3(HTML("Please <span id='go_to_login' style='color: #14499F; text-decoration: underline; cursor: pointer;'>log in</span> to use this feature")),
                                      ),
-                                     column(7, id = NS(id, "betting_closed"),
+                                     column(12, id = NS(id, "betting_closed"),
+                                            div(style = "height: 50px;"),
                                             h3("Betting not open for this match")
                                      )
                                      # )
@@ -198,6 +199,8 @@ card_for_match_details_Server <- function(id, r6) {
     
     to_win <- reactiveVal(NULL)
     to_win_odds <- reactiveVal(NULL)
+    
+    match_id_chosen <- reactiveVal(NULL)
     
     #~~~~~~~~~~~~~~~~~
     # Module Server
@@ -244,6 +247,8 @@ card_for_match_details_Server <- function(id, r6) {
       home_team <- r6$selected_home_team
       away_team <- r6$selected_away_team
       
+      match_id_chosen(paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending))
+      
       output$home_team <- renderText(toupper(home_team))
       output$away_team <- renderText(toupper(away_team))
       
@@ -267,20 +272,23 @@ card_for_match_details_Server <- function(id, r6) {
       shinyjs::show("chose_bet_row")
       
       # check if betting is open
-      odds_row <- r6$odds$pl %>% 
-        filter(
-          HomeTeam == r6$selected_home_team,
-          AwayTeam == r6$selected_away_team
-        )
+
+      # match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
+      
+      bet_open <- f_match_open_for_betting() %>% 
+        filter(match_id == match_id_chosen()) %>% 
+        pull(bet_open)
       
       
       if(r6$user_info$logged_in){
         
-        if(nrow(odds_row) > 0){
+        shinyjs::hide("no_user_info")
+        
+        if(bet_open){
           shinyjs::show("user_info")
           shinyjs::show("pie_chart_show")
           
-          shinyjs::hide("no_user_info")
+          shinyjs::hide("betting_closed")
         } else{
           shinyjs::hide("user_info")
           shinyjs::hide("pie_chart_show")
@@ -289,10 +297,12 @@ card_for_match_details_Server <- function(id, r6) {
         }
 
       } else {
+        shinyjs::show("no_user_info")
+        
         shinyjs::hide("user_info")
         shinyjs::hide("pie_chart_show")
         
-        shinyjs::show("no_user_info")
+        shinyjs::show("betting_closed")
       }
       
       
@@ -320,13 +330,49 @@ card_for_match_details_Server <- function(id, r6) {
       output$fair_away <- renderText(round(100/away_perc,2))
       
       
+      
+      
+    })
+    
+    observeEvent(input$bet_btn, {
+      
+      shinyjs::show("your_odds_row")
+      
+      # match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
+      
+      # show pie
+      
+      l_bets <- fetch_total_bets_on_match(match_id_chosen())
+      
+      output$pie_chart <- renderPlotly({
+        f_pie_n_bets(
+          list_n_bets = l_bets, 
+          list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
+        )
+      })
+      
+      # show odds active on the match  
+      output$your_bets_table <- renderReactable({
+        f_your_bets_table(r6)
+      })
+      
+      
+      # IS BET OPEN?
+     
+      
+      bet_open <- f_match_open_for_betting() %>% 
+        filter(match_id == match_id_chosen()) %>% 
+        pull(bet_open)
+      
       odds_row <- r6$odds$pl %>% 
         filter(
           HomeTeam == r6$selected_home_team,
           AwayTeam == r6$selected_away_team
         )
       
-      if(nrow(odds_row) > 0){
+      if(bet_open){
+        print("set button vals")
+        
         home_perc_bet <- odds_row %>% pull(`Home Win Probability (%)`)
         away_perc_bet <- odds_row %>% pull(`Away Win Probability (%)`)
         draw_perc_bet <- odds_row %>% pull(`Draw Probability (%)`)
@@ -339,32 +385,8 @@ card_for_match_details_Server <- function(id, r6) {
         output$home_odds <- renderText(round(as.numeric(home_odds()),2))
         output$away_odds <- renderText(round(as.numeric(away_odds()),2))
         output$draw_odds <- renderText(round(as.numeric(draw_odds()),2))
-        
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # BETTING NOT AVAILABLE
-        
       }
       
-      
-    })
-    
-    observeEvent(input$bet_btn, {
-      
-      shinyjs::show("your_odds_row")
-      
-      # SET REAL NUMBER OF ODDS
-      # show pie
-      output$pie_chart <- renderPlotly({
-        f_pie_n_bets(
-          list_n_bets = c(440, 200, 700), 
-          list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
-        )
-      })
-      
-      # show odds active on the match  
-      output$your_bets_table <- renderReactable({
-        f_your_bets_table(r6)
-      })
       
       
     })
@@ -410,29 +432,25 @@ card_for_match_details_Server <- function(id, r6) {
     
     observeEvent(input$btn_place_bet, {
       
-      match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
+      # match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
       
       # betting conditions
       active_bets_total <- r6$user_info$bets %>% filter(is.na(bet_concluded)) %>% nrow()
-      bets_on_match <- format_bets_for_match_bets(r6$user_info$bets,match_id_chosen) %>% nrow()
+      bets_on_match <- format_bets_for_match_bets(r6$user_info$bets,match_id_chosen()) %>% nrow()
       
-      utc_time_now <- format(Sys.time(), tz = "UTC", usetz = TRUE)
-      utc_time_schedule <- r6$data$pl_schedule %>% 
-        filter(
-          HomeTeam == r6$selected_home_team,
-          AwayTeam == r6$selected_away_team
-        ) %>% 
-        pull(utc_date)
+      bet_open <- f_match_open_for_betting() %>% 
+        filter(match_id == match_id_chosen()) %>% 
+        pull(game_15_started)
       
       
       if( bets_on_match >2 ){
         showNotification("Max number of bets per match is 3", type = "error", duration = 5)
       } 
-      # else if(active_bets_total > 9 ) {
-      #   showNotification("Max number of total bets is 10", type = "error", duration = 5)
-      # } 
-      else if (utc_time_now > utc_time_schedule){
-        showNotification("Game already started", type = "error", duration = 5)
+      else if(active_bets_total > 9 ) {
+        showNotification("Max number of total bets is 10", type = "error", duration = 5)
+      }
+      else if (bet_open){
+        showNotification("Game already started, or too close to kickoff", type = "error", duration = 5)
       }
       else {
         
@@ -445,11 +463,21 @@ card_for_match_details_Server <- function(id, r6) {
                               user_id = r6$user_info$user_id)
         
         r6$user_info$bets <- fetch_table_all_bets(r6)
-        update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen)
+        update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen())
         
         
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
+        })
+        
+        # update pie
+        l_bets <- fetch_total_bets_on_match(match_id_chosen())
+        
+        output$pie_chart <- renderPlotly({
+          f_pie_n_bets(
+            list_n_bets = l_bets, 
+            list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
+          )
         })
         
         shinyjs::hide(selector = ".full-page-spinner") 
@@ -461,19 +489,16 @@ card_for_match_details_Server <- function(id, r6) {
     
     observeEvent(input$cancel, ignoreInit = T, {
       
-      utc_time_now <- format(Sys.time(), tz = "UTC", usetz = TRUE)
-      utc_time_schedule <- r6$data$pl_schedule %>% 
-        filter(
-          HomeTeam == r6$selected_home_team,
-          AwayTeam == r6$selected_away_team
-        ) %>% 
-        pull(utc_date)
       
-      if (utc_time_now > utc_time_schedule){
-        showNotification("Game already started", type = "error", duration = 5)
+      bet_open <- f_match_open_for_betting() %>% 
+        filter(match_id == match_id_chosen()) %>% 
+        pull(game_15_started)
+
+      
+      if (bet_open){
+        showNotification("Game already started, or too close to kickoff", type = "error", duration = 5)
       }
       else {
-        
         
         shinyjs::show(selector = ".full-page-spinner") 
         
@@ -485,6 +510,17 @@ card_for_match_details_Server <- function(id, r6) {
         
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
+        })
+        
+        
+        # update pie
+        l_bets <- fetch_total_bets_on_match(match_id_chosen)
+        
+        output$pie_chart <- renderPlotly({
+          f_pie_n_bets(
+            list_n_bets = l_bets, 
+            list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
+          )
         })
         
         shinyjs::hide(selector = ".full-page-spinner") 

@@ -9,6 +9,96 @@ $(document).ready(function() {
 });
 
 
+
+
+
+
+
+
+
+
+
+/*
+
+
+$(document).ready(function() {
+document.getElementById('go_to_login').onclick = function() {
+    console.log("goto login clicked");
+    Shiny.setInputValue('go_to_login_page', Math.random());
+
+  };
+  
+});
+
+
+*/
+
+// is the full screen being closed?
+
+$(document).on('shiny:connected', function() {
+  // Select the target element
+  const targetElement = document.getElementById('top_of_estimation_tab-card_module-my_card');
+
+  // Create a MutationObserver to watch for changes in attributes
+  const observer = new MutationObserver((mutationsList) => {
+    mutationsList.forEach((mutation) => {
+      if (
+        mutation.type === 'attributes' &&
+        mutation.attributeName === 'data-full-screen'
+      ) {
+        const isFullScreen = targetElement.getAttribute('data-full-screen');
+        
+        // Check if full screen is closed (data-full-screen changes to "false")
+        if (isFullScreen === 'false') {
+          // Send event to Shiny
+          Shiny.setInputValue('full_screen_closed', true, {priority: 'event'});
+        }
+      }
+    });
+  });
+
+  // Configure the observer to watch for attribute changes
+  observer.observe(targetElement, { attributes: true });
+});
+
+$(document).ready(function() {
+  // Function to programmatically click the close button (top-right "X")
+  function closeFullscreen() {
+    const closeButton = document.querySelector('.bslib-full-screen-exit');
+
+    if (closeButton) {
+      console.log("Close button found, clicking to exit fullscreen");
+      closeButton.click(); // Programmatically click the close button
+    } else {
+      console.warn("Close button not found");
+    }
+  }
+
+  // Add click event listener to the login link
+  const loginButton = document.getElementById('go_to_login');
+  if (loginButton) {
+    loginButton.onclick = function() {
+      console.log("go_to_login clicked");
+
+      // First, close the fullscreen
+      closeFullscreen();
+
+      // Then, send the Shiny event for the login action
+      Shiny.setInputValue('go_to_login_page', Math.random());
+    };
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
 // JavaScript in custom.js
 
 let ignorePopState = false; // Flag to prevent infinite loops
@@ -45,16 +135,6 @@ Shiny.addCustomMessageHandler('updateURL', function(message) {
 });
 
 // Listen for tab changes triggered by user click
-/*
-$(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
-  var tabId = $(e.target).attr('data-value');
-  console.log('Tab changed to:', tabId);
-  Shiny.setInputValue('current_tab', tabId, {priority: 'event'});
-  var menu = document.querySelector('.dropdown-menu.show');  // Find the open dropdown menu
-        menu.classList.remove('show');  // Remove 'show' class to close it
-});
-
-*/
 
 $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
   var tabId = $(e.target).attr('data-value');
@@ -84,33 +164,15 @@ window.addEventListener('popstate', function(event) {
 
 
 
-// is the full screen being closed?
 
-$(document).on('shiny:connected', function() {
-  // Select the target element
-  const targetElement = document.getElementById('top_of_estimation_tab-card_module-my_card');
 
-  // Create a MutationObserver to watch for changes in attributes
-  const observer = new MutationObserver((mutationsList) => {
-    mutationsList.forEach((mutation) => {
-      if (
-        mutation.type === 'attributes' &&
-        mutation.attributeName === 'data-full-screen'
-      ) {
-        const isFullScreen = targetElement.getAttribute('data-full-screen');
-        
-        // Check if full screen is closed (data-full-screen changes to "false")
-        if (isFullScreen === 'false') {
-          // Send event to Shiny
-          Shiny.setInputValue('full_screen_closed', true, {priority: 'event'});
-        }
-      }
-    });
-  });
 
-  // Configure the observer to watch for attribute changes
-  observer.observe(targetElement, { attributes: true });
-});
+
+
+
+
+
+
 
 
 
@@ -177,11 +239,6 @@ $(document).ready(function() {
     }
   });
 });
-
-
-
-
-
 
 
 // Function to toggle full screen for the card via Shiny message handler

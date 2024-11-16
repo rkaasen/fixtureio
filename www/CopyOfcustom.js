@@ -9,6 +9,25 @@ $(document).ready(function() {
 });
 
 
+
+
+
+
+
+$(document).ready(function() {
+document.getElementById('go_to_login').onclick = function() {
+    console.log("goto login clicked");
+    Shiny.setInputValue('go_to_login_page', Math.random());
+    
+  };
+});
+
+
+
+
+
+
+
 // JavaScript in custom.js
 
 let ignorePopState = false; // Flag to prevent infinite loops
@@ -45,16 +64,6 @@ Shiny.addCustomMessageHandler('updateURL', function(message) {
 });
 
 // Listen for tab changes triggered by user click
-/*
-$(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
-  var tabId = $(e.target).attr('data-value');
-  console.log('Tab changed to:', tabId);
-  Shiny.setInputValue('current_tab', tabId, {priority: 'event'});
-  var menu = document.querySelector('.dropdown-menu.show');  // Find the open dropdown menu
-        menu.classList.remove('show');  // Remove 'show' class to close it
-});
-
-*/
 
 $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
   var tabId = $(e.target).attr('data-value');
@@ -84,7 +93,15 @@ window.addEventListener('popstate', function(event) {
 
 
 
+
+
+
+
+
 // is the full screen being closed?
+
+
+
 
 $(document).on('shiny:connected', function() {
   // Select the target element
@@ -111,6 +128,10 @@ $(document).on('shiny:connected', function() {
   // Configure the observer to watch for attribute changes
   observer.observe(targetElement, { attributes: true });
 });
+
+
+
+
 
 
 
@@ -153,15 +174,30 @@ $(document).ready(function() {
 
 /* enter to log in */
 
-$(document).on('keydown', function(e) {
-  if (e.key === 'Enter') {
-    if ($('#login_page-password').is(':focus') || $('#login_page-username').is(':focus')) {
-      $('#login_page-login_btn').click();
+$(document).ready(function() {
+  // Listen for "Enter" key on the username or password fields
+  $(document).on('keydown', function(e) {
+    if (e.key === 'Enter') {
+      
+      console.log("Enter Button Clicked");
+      
+      // Check if focus is on either the username or password input
+      if ($('#login_page-username').is(':focus') || $('#login_page-password').is(':focus')) {
+        
+        console.log("focus was correct");
+        
+        // Trigger the login button click
+        $('#login_page-login_btn').click();
+        
+        setTimeout(function() {
+          $('#login_page-login_btn').click();
+        }, 100); // 100 ms delay
+        
+        
+      }
     }
-  }
+  });
 });
-
-
 
 
 // Function to toggle full screen for the card via Shiny message handler

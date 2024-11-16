@@ -21,7 +21,8 @@ how_it_works_UI <- function(id) {
 
     #acc .accordion-button {
       border-radius: 10px; /* Rounded corners for the button */
-      font-size: 26px; /* Adjust this value to change the title size */
+      font-size: 24px; /* Adjust this value to change the title size */
+      font-weight: 700;
     }
 
     #acc .accordion-body {
@@ -88,7 +89,7 @@ how_it_works_UI <- function(id) {
                              div(
                                # style = "display: flex; align-items: center; justify-content: center; ",
                                "Then click the", 
-                               actionButton(NS(id,"try_it_btn_top"), label = "TRY IT YOURSELF !", width = "150px",style = "height: 35px",class = "reactable-button" ),
+                               actionButton(NS(id,"try_it_btn_top"), label = "TRY IT YOURSELF !", width = "160px",style = "height: 35px",class = "reactable-button" ),
                                '  button in the middle of the screen'
                              ),
 

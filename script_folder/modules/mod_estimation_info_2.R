@@ -9,6 +9,10 @@ estimation_page_info_UI <- function(id) {
   
   fluidPage(
     
+    # hidden(
+    #   div(class = "full-page-spinner", tags$img(src = "spinner.gif"))
+    # ),
+    # 
     useShinyjs(),
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
@@ -41,12 +45,12 @@ estimation_page_info_UI <- function(id) {
                             NS(id,"choose_stats"), label = "",
                             choices = list(
                               "POINTS" = "POINTS", 
-                              "GOALS SCORED" = "GOALS SCORED",
-                              "GOALS CONCEDED" = "GOALS CONCEDED",
-                              "SHOTS ON TARGET" = "SHOTS ON TARGET",
-                              "SHOTS ON TARGET CONCEDED" = "SHOTS ON TARGET CONCEDED"
+                              "GOALS SCORED" = "GOALS_SCORED",
+                              "GOALS CONCEDED" = "GOALS_CONCEDED",
+                              "SHOTS ON TARGET" = "SHOTS_ON_TARGET",
+                              "SHOTS ON TARGET CONCEDED" = "SHOTS_ON_TARGET_CONCEDED"
                             ), 
-                            selected = c("POINTS", "GOALS SCORED", "GOALS CONCEDED")
+                            selected = c("POINTS", "GOALS_SCORED", "GOALS_CONCEDED")
                           )
                      ),
                      
@@ -58,11 +62,11 @@ estimation_page_info_UI <- function(id) {
                           checkboxGroupInput(
                             NS(id,"choose_stats_h2h"), label = "",
                             choices = list(
-                              "POINTS H2H" = "POINTS H2H",
-                              "GOALS SCORED H2H" = "GOALS SCORED H2H",
-                              "GOALS CONCEDED H2H" = "GOALS CONCEDED H2H"
+                              "POINTS H2H" = "POINTS_H2H",
+                              "GOALS SCORED H2H" = "GOALS_SCORED_H2H",
+                              "GOALS CONCEDED H2H" = "GOALS_CONCEDED_H2H"
                             ), 
-                            selected = c("POINTS H2H")
+                            selected = c("POINTS_H2H")
                           )
                      ),
                      
@@ -73,11 +77,11 @@ estimation_page_info_UI <- function(id) {
                           checkboxGroupInput(
                             NS(id,"choose_stats_ha"), label = "",
                             choices = list(
-                              "POINTS HA" = "POINTS HA",
-                              "GOALS SCORED HA" = "GOALS SCORED HA",
-                              "GOALS CONCEDED HA" = "GOALS CONCEDED HA"
+                              "POINTS HA" = "POINTS_HA",
+                              "GOALS SCORED HA" = "GOALS_SCORED_HA",
+                              "GOALS CONCEDED HA" = "GOALS_CONCEDED_HA"
                             ), 
-                            selected = c("POINTS HA")
+                            selected = c("POINTS_HA")
                           )
                      ),
                      
@@ -129,20 +133,30 @@ estimation_page_info_UI <- function(id) {
             
             
             
-            estimation_page_stats_numeric_UI(id = NS(id,"POINTS")),
-            estimation_page_stats_numeric_UI(id = NS(id,"GOALS SCORED")),
-            estimation_page_stats_numeric_UI(id = NS(id,"GOALS CONCEDED")),
+            estimation_page_stats_numeric_UI(NS(id,"POINTS")),
+            estimation_page_stats_numeric_UI(NS(id,"GOALS_SCORED"),
+                                             header = "GOALS SCORED"),
+            estimation_page_stats_numeric_UI(NS(id,"GOALS_CONCEDED"),
+                                             header = "GOALS CONCEDED"),
             
-            estimation_page_stats_numeric_UI(id = NS(id,"SHOTS ON TARGET") ),
-            estimation_page_stats_numeric_UI(id = NS(id,"SHOTS ON TARGET CONCEDED")),
+            estimation_page_stats_numeric_UI(NS(id,"SHOTS_ON_TARGET"),
+                                             header = "SHOTS ON TARGET"),
+            estimation_page_stats_numeric_UI(NS(id,"SHOTS_ON_TARGET_CONCEDED"),
+                                             header = "SHOTS ON TARGET \n CONCEDED"),
             
-            estimation_page_stats_numeric_UI(id = NS(id,"POINTS H2H"), h2h = T, home_away = F),
-            estimation_page_stats_numeric_UI(id = NS(id,"GOALS SCORED H2H"), h2h = T, home_away = F),
-            estimation_page_stats_numeric_UI(id = NS(id,"GOALS CONCEDED H2H"), h2h = T, home_away = F),
+            estimation_page_stats_numeric_UI(NS(id,"POINTS_H2H"), h2h = T, home_away = F,
+                                             header = "POINTS H2H"),
+            estimation_page_stats_numeric_UI(NS(id,"GOALS_SCORED_H2H"), h2h = T, home_away = F,
+                                             header = "GOALS SCORED H2H"),
+            estimation_page_stats_numeric_UI(NS(id,"GOALS_CONCEDED_H2H"), h2h = T, home_away = F,
+                                             header = "GOALS CONCEDED H2H"),
             
-            estimation_page_stats_numeric_UI(id = NS(id,"POINTS HA"), h2h = F, home_away = T),
-            estimation_page_stats_numeric_UI(id = NS(id,"GOALS SCORED HA"), h2h = F, home_away = T),
-            estimation_page_stats_numeric_UI(id = NS(id,"GOALS CONCEDED HA"), h2h = F, home_away = T)
+            estimation_page_stats_numeric_UI(NS(id,"POINTS_HA"), h2h = F, home_away = T,
+                                             header = "POINTS HA"),
+            estimation_page_stats_numeric_UI(NS(id,"GOALS_SCORED_HA"), h2h = F, home_away = T,
+                                             header = "GOALS SCORED HA"),
+            estimation_page_stats_numeric_UI(NS(id,"GOALS_CONCEDED_HA"), h2h = F, home_away = T,
+                                             header = "GOALS CONCEDED HA")
             
             
             
@@ -180,22 +194,32 @@ estimation_page_info_Server <- function(id, r6) {
     
     
     estimation_page_stats_numeric_Server("POINTS", r6, metric_name = "Points_lx", positive_metric = T)
-    estimation_page_stats_numeric_Server("GOALS SCORED", r6, metric_name = "Goals_Scored_lx", positive_metric = T)
-    estimation_page_stats_numeric_Server("GOALS CONCEDED", r6, metric_name = "Goals_Conceded_lx", positive_metric = F)
+    estimation_page_stats_numeric_Server("GOALS_SCORED", r6, metric_name = "Goals_Scored_lx", positive_metric = T,
+                                         header = "GOALS SCORED")
+    estimation_page_stats_numeric_Server("GOALS_CONCEDED", r6, metric_name = "Goals_Conceded_lx", positive_metric = F,
+                                         header = "GOALS CONCEDED")
     
     
-    estimation_page_stats_numeric_Server("SHOTS ON TARGET", r6, metric_name = "Shots_OT_For_lx", positive_metric = T)
-    estimation_page_stats_numeric_Server("SHOTS ON TARGET CONCEDED", r6, metric_name = "Shots_OT_Conceded_lx", positive_metric = F,
+    estimation_page_stats_numeric_Server("SHOTS_ON_TARGET", r6, metric_name = "Shots_OT_For_lx", positive_metric = T,
+                                         header = "SHOTS ON TARGET")
+    estimation_page_stats_numeric_Server("SHOTS_ON_TARGET_CONCEDED", r6, metric_name = "Shots_OT_Conceded_lx", positive_metric = F,
                                          header = "SHOTS ON TARGET \n CONCEDED")
+    # 
     
+    estimation_page_stats_numeric_Server("POINTS_H2H", r6, metric_name = "Points_lx", positive_metric = T, h2h = T, home_away=F,
+                                         header = "POINTS H2H")
+    estimation_page_stats_numeric_Server("GOALS_SCORED_H2H", r6, metric_name = "Goals_Scored_lx", positive_metric = T, h2h = T, home_away=F,
+                                         header = "GOALS SCORED H2H")
+    estimation_page_stats_numeric_Server("GOALS_CONCEDED_H2H", r6, metric_name = "Goals_Conceded_lx", positive_metric = F, h2h = T, home_away=F,
+                                         header = "GOALS CONCEDED H2H")
     
-    estimation_page_stats_numeric_Server("POINTS H2H", r6, metric_name = "Points_lx", positive_metric = T, h2h = T, home_away=F)
-    estimation_page_stats_numeric_Server("GOALS SCORED H2H", r6, metric_name = "Goals_Scored_lx", positive_metric = T, h2h = T, home_away=F)
-    estimation_page_stats_numeric_Server("GOALS CONCEDED H2H", r6, metric_name = "Goals_Conceded_lx", positive_metric = F, h2h = T, home_away=F)
+    estimation_page_stats_numeric_Server("POINTS_HA", r6, metric_name = "Points_lx", positive_metric = T, h2h = F, home_away=T,
+                                         header = "POINTS HA")
+    estimation_page_stats_numeric_Server("GOALS_SCORED_HA", r6, metric_name = "Goals_Scored_lx", positive_metric = T, h2h = F, home_away=T,
+                                         header = "GOALS SCORED HA")
+    estimation_page_stats_numeric_Server("GOALS_CONCEDED_HA", r6, metric_name = "Goals_Conceded_lx", positive_metric = F, h2h = F, home_away=T,
+                                         header = "GOALS CONCEDED HA")
     
-    estimation_page_stats_numeric_Server("POINTS HA", r6, metric_name = "Points_lx", positive_metric = T, h2h = F, home_away=T)
-    estimation_page_stats_numeric_Server("GOALS SCORED HA", r6, metric_name = "Goals_Scored_lx", positive_metric = T, h2h = F, home_away=T)
-    estimation_page_stats_numeric_Server("GOALS CONCEDED HA", r6, metric_name = "Goals_Conceded_lx", positive_metric = F, h2h = F, home_away=T)
     
     
     

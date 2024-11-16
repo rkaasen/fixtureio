@@ -1,6 +1,10 @@
 /* styles.css */
 
 
+
+/*
+
+
 @font-face {
     font-family: 'Ahronbdgg';
     src: url('ahronbd.ttf') format('truetype');
@@ -11,14 +15,66 @@ body {
     font-size: 14px;
 }
 
+*/
+
+/* Link to Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* Set Poppins as the default font */
+body {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+label {
+  font-weight: 700;
+}
+
+/* Font weights for specific elements */
+h1, h2, h3 {
+  font-weight: 950; /* Bold for headers */
+}
+
+h4, h5, h6 {
+  font-weight: 900; /* Bold for headers */
+}
+
+p {
+  font-weight: 700; /* Regular weight for paragraph text */
+}
+
+.btn {
+  font-weight: 700; /* Medium weight for buttons */
+}
+
+.form-control{
+  font-weight: 700
+}
+
+element.style {
+  font-weight: 700
+}
+
+
+
 
 .container-fluid {
         padding: 0;
 }
 
+/*
+
 .js-plotly-plot .plotly .main-svg, .js-plotly-plot .plotly text {
         font-family: 'Ahronbdgg' !important;
 }
+
+*/
+
+
+
+
+
 
 
 .navbar-default {
@@ -34,14 +90,23 @@ body {
   padding: 10px 20px;         /* Adjust padding for better appearance */
   display: flex;              /* Ensure the navigation bar is a flexbox */
   justify-content: flex-end;  /* Aligns the tabs to the right */
+  font-weight: 700;
 }
 
 .nav.nav-underline > li > a {
   color: white;               /* Text color */
   font-size: 20px;            /* Font size of the text */
   padding: 15px 20px;         /* Padding around the text */
+  font-weight: 700;
 }
 
+.nav.nav-underline .dropdown-item {
+  font-weight: 700;
+}
+
+.nav.nav-underline .nav-link.active {
+  font-weight: 800;  /* Adjust the weight as needed */
+}
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */ 
 /* Custom CSS to create a gradient background class */
@@ -125,6 +190,7 @@ body {
   border-radius: 4px;
   border: 1px solid #404040; 
   align-items: center;
+  font-weight: 700;
 }
 
 .reactable-button:hover {
@@ -347,6 +413,7 @@ body {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */ 
 /* navbar (not sure if using) */
 
+/*
 
 .navbar-custom {
   background-color: #333; 
@@ -357,11 +424,13 @@ body {
 }
 .navbar-custom .navbar-nav > .active > a {
   border-bottom: 2px solid white; 
+  
 }
 .btn-light:hover {
 background-color: #4CAF50; 
 }
 
+*/
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */ 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */ 
@@ -584,14 +653,14 @@ border-radius: 0px;
 /*  spnnier over the page */
 
 .full-page-spinner {
-  display: none; /* Hidden by default */
-  position: fixed;
+ /* display: none; Hidden by default */
+  /* position: fixed; */
   top: 0;
   left: 0;
   width: 100vw; /* Full viewport width */
   height: 100vh; /* Full viewport height */
   background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white overlay */
-  z-index: 9999; /* Ensures it stays on top */
+/*  z-index: 9999; Ensures it stays on top */
   display: flex;
   justify-content: center;
   align-items: center;

@@ -89,12 +89,22 @@ user_page_Server <- function(id, r6) {
       p <- ggplot(
         data = df_plot,
         aes(x = Date, y = bet_concluded, fill = coloring,
-            text = paste0("Game: ", Match, "\n Result: ", winning_team, "\n Your Bet: ", bet))
+            text = paste0("Game: ", Match, "\n Result: ", winning_team, "\n Your Bet: ", bet, " (", odds, ")"))
       ) + 
         geom_bar(
           stat = "identity", color = "black", 
         ) + 
-        scale_fill_manual(values = c("win" = "#4CAF50", "loss" = "#e22020"))
+        scale_fill_manual(values = c("win" = "#4CAF50", "loss" = "#e22020")) +
+        scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
+        theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))  + 
+        geom_hline(yintercept=0, linetype="dashed", color = "#14499F") +
+        ylab("Return") +
+        theme(
+          legend.position = "none",
+          panel.background = element_rect(fill='transparent'),
+          plot.background = element_rect(fill='transparent', color=NA),
+        )
+        
       
       ggplotly(p, tooltip = c("text"))
     })

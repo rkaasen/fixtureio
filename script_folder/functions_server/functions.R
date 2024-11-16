@@ -332,21 +332,76 @@ f_prepare_schedule_data <- function(df, enriched = F) {
       HomeTeam_original = `Home Team`,
       AwayTeam_original = `Away Team`
     ) 
-    
-    if(!enriched){
-      df_out <- df_out %>% 
-        # Join home team names
-        left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("HomeTeam_original"="Team_name_from_schedule_data")) %>% 
-        rename(HomeTeam = Team) %>%
-        # Join away team names
-        left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("AwayTeam_original"="Team_name_from_schedule_data")) %>% 
-        rename(AwayTeam = Team) 
-    } else {}
+  
+  if(!enriched){
+    df_out <- df_out %>% 
+      # Join home team names
+      left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("HomeTeam_original"="Team_name_from_schedule_data")) %>% 
+      rename(HomeTeam = Team) %>%
+      # Join away team names
+      left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("AwayTeam_original"="Team_name_from_schedule_data")) %>% 
+      rename(AwayTeam = Team) 
+  } else {}
   
   return(df_out)
   
 }
 
+
+f_calc_season_ending <- function(date){
+  
+  now_utc <- as_datetime(Sys.time(), tz = "UTC")
+  
+  year <- now_utc %>% year()
+  month <- now_utc %>% month()
+  day <- now_utc %>% day()
+  
+  if(month < 7){
+    return(year)
+  } else if(month > 7 ){
+    return(year + 1)
+  } else if(day>15) {
+    return(year + 1)
+  } else{
+    return(year)
+  }
+  
+  
+}
+
+f_match_open_for_betting <- function(df_enriched = pl_enriched_schedule, df_schedule = pl_schedule){
+  
+  df_odds_open <- df_enriched %>% 
+    mutate(
+      season_ending = f_calc_season_ending(utc_date),
+      match_id = paste0(HomeTeam, "-", AwayTeam , "-", season_ending),
+      odds_calculated = T
+    ) %>% 
+    select(
+      match_id,
+      odds_calculated
+    )
+  
+  now_utc <- as_datetime(Sys.time(), tz = "UTC")
+  
+  df_bet_open <- df_schedule %>% 
+    mutate(
+      season_ending = f_calc_season_ending(utc_date),
+      match_id = paste0(HomeTeam, "-", AwayTeam , "-", season_ending),
+    ) %>% 
+    select(match_id, utc_date) %>% 
+    left_join(
+      df_odds_open
+    ) %>% 
+    mutate(
+      game_15_started = ifelse(utc_date - as.difftime(15, units = "mins") < now_utc, TRUE, FALSE),
+      odds_calculated = ifelse(is.na(odds_calculated), F, odds_calculated),
+      bet_open = ifelse(odds_calculated & game_15_started == F, TRUE, FALSE)
+    )
+  
+  return(df_bet_open)
+  
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # DB FUNCTIONS ----
@@ -525,6 +580,42 @@ fetch_table_all_bets <- function(r6) {
   
 }
 
+fetch_total_bets_on_match <- function(match_id_input) {
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query)
+
+  
+  
+  match_bets <- all_bets %>% filter(match_id == match_id_input)
+  
+  split_text <- strsplit(match_id_input, "-")[[1]]
+  home_team_input <- split_text[1]  
+  away_team_input <- split_text[2]  
+
+  
+  match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
+  match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
+  match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
+  
+  l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
+  return(l_bets)
+}
+
+
 
 
 
@@ -557,6 +648,34 @@ update_n_bets_in_db <- function(user_id, bets_df, bets_week_starting, match_id_i
   tryCatch({
     dbExecute(con, sql, params = list(bets_available, user_id))
     message("Bet availability updated successfully!")
+  }, error = function(e) {
+    message("Error updating bet availability: ", e$message)
+  })
+}
+
+update_last_logged_in_db <- function(user_id) {
+  
+  utc_date <- as_datetime(Sys.time(), tz = "UTC")
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # Parameterized SQL update query
+  sql <- "UPDATE users SET last_login = $1 WHERE user_id = $2"
+  
+  # Execute the query
+  tryCatch({
+    dbExecute(con, sql, params = list(utc_date, user_id))
   }, error = function(e) {
     message("Error updating bet availability: ", e$message)
   })
@@ -958,14 +1077,15 @@ f_plot_winning_prediction_percent <- function(Home_rank, Away_rank, range, Home_
       theme(
         legend.position = 'none',
         axis.title.x = element_blank(),
-        text = element_text(size = 15, family = "Ahronbdgg"),
+        # text = element_text(size = 15, family = "Ahronbdgg"),
         axis.title.y.left =  element_blank(),
         axis.text.y = element_blank(),
         panel.grid.minor = element_blank(),
         panel.background = element_rect(fill='transparent'),
         plot.background = element_rect(fill='transparent', color=NA),
-        panel.border = element_blank(),
-        axis.text = element_text( family = "Ahronbdgg")
+        # axis.text = element_text( family = "Ahronbdgg"),
+        panel.border = element_blank()
+
       )
     
   } else {
@@ -1358,10 +1478,10 @@ f_last_10_table <- function(df, team) {
   
   t_out <- reactable(df_use_home_away, 
                      columns = list(
-                       Date = colDef(minWidth = 100, align = "left", style = list(fontSize = "20px")),
+                       Date = colDef(minWidth = 110, align = "left", style = list(fontSize = "14px")),
                        # Time = colDef(minWidth = 80, align = "center", style = list(fontSize = "18px")), 
                        Result = colDef(
-                         name = "", minWidth = 40, align = "center", vAlign = "center",
+                         name = "", minWidth = 40, align = "center", vAlign = "center", style = list(fontSize = "20px"),
                          cell = function(value) {
                            color <- if (value == "W") {
                              "#4CAF50"
@@ -1377,7 +1497,7 @@ f_last_10_table <- function(df, team) {
                                          cell = function(value) {
                                            if (value == team) {
                                              # Return a named list with the "style" key containing a list of CSS properties
-                                             list(cell = htmltools::tags$span(style = "color: #14499F; font-weight: bold; fontSize: 18px;", value))
+                                             list(cell = htmltools::tags$span(style = "color: #14499F; font-weight: bold; fontSize: 17px;", value))
                                            } else {
                                              list(cell = htmltools::tags$span(style = "color: #6b7073; font-weight: light; fontSize: 14px;", value))
                                            }
@@ -1386,14 +1506,14 @@ f_last_10_table <- function(df, team) {
                                       cell = function(value) {
                                         value
                                       },
-                                      style = function(value) list(fontSize = "22px")
+                                      style = function(value) list(fontSize = "16px")
                        ),
                        
                        AwayTeam = colDef(name = "Away", minWidth = 140, vAlign = "center",
                                          cell = function(value) {
                                            if (value == team) {
                                              # Return a named list with the "style" key containing a list of CSS properties
-                                             list(cell = htmltools::tags$span(style = "color: #14499F; font-weight: bold; fontSize: 18px;", value))
+                                             list(cell = htmltools::tags$span(style = "color: #14499F; font-weight: bold; fontSize: 17px;", value))
                                            } else {
                                              list(cell = htmltools::tags$span(style = "color: #6b7073; font-weight: light; fontSize: 14px;", value))
                                            }
@@ -1426,6 +1546,46 @@ f_last_10_table <- function(df, team) {
 
 
 f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home", "Draw", "Away")) {
+  
+  
+  if(sum(list_n_bets)==0){
+    
+    plot <- plot_ly(type = "scatter", mode = "text") %>%
+      layout(
+        xaxis = list(visible = FALSE),
+        yaxis = list(visible = FALSE),
+        annotations = list(
+          list(
+            x = 0.5,
+            y = 0.5,
+            text = "No Bets placed yet",
+            showarrow = FALSE,
+            font = list(size = 20),
+            xref = "paper",
+            yref = "paper",
+            xanchor = "center",
+            yanchor = "middle"
+          )
+        )
+      ) %>% 
+      layout(
+        title = list(
+          text = paste("<b>Total bets on game:</b><br><span style='font-size:24px;'>", 0, "</span>"),
+          x = 0.54,
+          y = 1.27,  # Increase this value to add more space above the pie chart
+          font = list(family = "Ahronbdgg", size = 20) # Font for "Total bets on game" text
+        ),
+      
+        showlegend = FALSE,             # Hide the legend
+        paper_bgcolor = 'rgba(0, 0, 0, 0)', # Transparent background
+        plot_bgcolor = 'rgba(0, 0, 0, 0)'   # Transparent plot background
+        
+      ) %>% 
+      config(displayModeBar = FALSE)  # Hide the mode bar
+    
+    return(plot)
+    
+  }
   
   # Define team data with fixed ordering and labels
   # REVERSE LISTS:
@@ -1499,10 +1659,10 @@ f_your_bets_table <- function(r6){
   
   r <- reactable(df_use, 
                  columns = list(
-                   bet = colDef(name = "BET", minWidth = 250, align = "left", style = list(fontSize = "20px"), vAlign = "center"),
+                   bet = colDef(name = "BET", minWidth = 250, align = "left", style = list(fontSize = "16px"), vAlign = "center"),
                    
-                   odds = colDef(name = "ODDS", minWidth = 85, align = "center", style = list(fontSize = "28px"), vAlign = "center"),
-                   placed = colDef(name = "Placed", minWidth = 200, align = "center", style = list(fontSize = "20px"), vAlign = "center"),
+                   odds = colDef(name = "ODDS", minWidth = 85, align = "center", style = list(fontSize = "18px"), vAlign = "center"),
+                   placed = colDef(name = "Placed", minWidth = 200, align = "center", style = list(fontSize = "15px"), vAlign = "center"),
                    
                    bet_id = colDef(
                      name = "Cancel",
@@ -1582,26 +1742,61 @@ f_format_all_bets <- function(r6){
 
 f_all_bets_table <- function(r6){
   
+  df_bet_status <- f_match_open_for_betting() %>% 
+    select(match_id, game_15_started)
+  
   df_use <- f_format_all_bets(r6) %>% 
-    mutate(vs_col = "VS") %>% 
-    select(HomeTeam, vs_col, AwayTeam, bet, odds, bet_concluded, Date, Time) 
+    mutate(
+      vs_col = "VS",
+      Season_ending = f_calc_season_ending(utc_date)
+    ) %>% 
+    mutate(match_id = paste0(HomeTeam, "-", AwayTeam, "-", Season_ending)) %>% 
+    left_join(
+      df_bet_status, 
+      by=c("match_id")
+    ) %>% 
+    mutate(
+      Status = case_when(
+        !is.na(bet_concluded) ~ "Concluded",
+        game_15_started ~ "Pending",
+        T ~ "Active"
+      ),
+      col_def = case_when(
+        Status == "Concluded" ~ "#14499F",
+        Status == "Pending" ~ "#6b7073",
+        T ~ "#4CAF50"
+      ),
+    ) %>% 
+    select(Status, HomeTeam, vs_col, AwayTeam, bet, odds, bet_concluded, Date, Time, col_def)
+  
+  
   
   
   r <- reactable(df_use, 
                  columns = list(
+                   
+                   Status = colDef(style = list(fontSize = "13px"), align = "center",minWidth = 110 , vAlign = "center",
+                                   cell = reactablefmtr::pill_buttons( data =df_use,
+                                     color_ref  = "col_def",
+                                     text_color = "white"  # White text color for contrast
+                                   )
+                   ),
+                   
+                   
+                   
                    Date = colDef(minWidth = 105, align = "center", 
-                                 style = list(fontSize = "18px", color = "#14499F"), vAlign = "center"),
+                                 style = list(fontSize = "14px", color = "#14499F"), vAlign = "center"),
                    
                    Time = colDef(minWidth = 80, align = "center", 
-                                 style = list(fontSize = "18px", color = "#14499F"), vAlign = "center"), 
+                                 style = list(fontSize = "14px", color = "#14499F"), vAlign = "center"), 
                    
                    HomeTeam = colDef(name = "Home Team", minWidth = 170, align = "right", vAlign = "center",
                                      style = function(value, index) {
                                        # Set text to black and larger font if it matches the 'bet' column, else default
                                        if (value == df_use$bet[index]) {
-                                         list(color = "black", fontSize = "22px")
+                                         list(color = "black", fontSize = "18px")
                                        } else {
-                                         list(color = "#14499F", fontSize = "16px")
+                                         list(color = "#14499F", fontSize = "14px")
                                        }
                                      }),
                    
@@ -1609,9 +1804,9 @@ f_all_bets_table <- function(r6){
                                    style = function(value, index) {
                                      # Set text to black and larger font if it matches the 'bet' column, else default
                                      if ("DRAW" == df_use$bet[index]) {
-                                       list(color = "black", fontSize = "22px")
+                                       list(color = "black", fontSize = "18px")
                                      } else {
-                                       list(color = "#14499F", fontSize = "16px")
+                                       list(color = "#14499F", fontSize = "14px")
                                      }
                                    }),
                    
@@ -1619,24 +1814,33 @@ f_all_bets_table <- function(r6){
                                      style = function(value, index) {
                                        # Set text to black and larger font if it matches the 'bet' column, else default
                                        if (value == df_use$bet[index]) {
-                                         list(color = "black", fontSize = "22px")
+                                         list(color = "black", fontSize = "18px")
                                        } else {
-                                         list(color = "#14499F", fontSize = "16px")
+                                         list(color = "#14499F", fontSize = "14px")
                                        }
                                      }),
                    
                    bet = colDef(show = F), 
+                   col_def = colDef(show = F), 
                    
                    odds = colDef(name = "ODDS", minWidth = 60, align = "center", 
-                                 style = list(fontSize = "25px", color = "#14499F"), vAlign = "center"),
+                                 style = list(fontSize = "15px", color = "#14499F"), vAlign = "center"),
                    
-                   bet_concluded = colDef(name = "Return", minWidth = 100, align = "center", 
-                                          style = list(fontSize = "20px", color = "#14499F"), vAlign = "center")
+                   bet_concluded = colDef(name = "Return", minWidth = 100, align = "center", vAlign = "center",
+                                          style = function(value) {
+                                            color <- if (is.na(value) | value > 0) "#4CAF50" else "#e22020"  # Green if above 0, red if below
+                                            list(
+                                              fontSize = "20px",color = color,  # Apply conditional color
+                                              fontWeight = "bold"
+                                            )
+                                          }
+                   )
                  ),
                  
                  # Default settings
                  pagination = TRUE, sortable = TRUE, fullWidth = FALSE,
-                 class = "selection_table",
+                 defaultSorted = list(Date = "desc"),
+                 class = "custom_table_10_matches",
                  theme = reactableTheme(
                    backgroundColor = "transparent"
                  )

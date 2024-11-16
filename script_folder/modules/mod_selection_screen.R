@@ -9,6 +9,8 @@ team_select_UI <- function(id) {
   
   fluidPage(
     
+    
+    
     div(class = "gradient-bg-estimation",
         br(),
         
@@ -59,6 +61,8 @@ team_select_UI <- function(id) {
 
 team_select_Server <- function(id, r6) {
   moduleServer(id, function(input, output, session) {
+    
+    
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # CONTROLS ON SIDE BAR
     observeEvent(input$league_select_buttons, {
@@ -121,11 +125,6 @@ team_select_Server <- function(id, r6) {
         df_filtered_team <- r6$data$schedule
       }
       
-      # odds_open_df <- r6$odds$pl %>% 
-      #   filter(
-      #     HomeTeam == r6$selected_home_team,
-      #     AwayTeam == r6$selected_away_team
-      #   )
       
       df_use <- df_filtered_team %>% 
         select(Date, Time, HomeTeam, AwayTeam) %>% 
@@ -139,15 +138,16 @@ team_select_Server <- function(id, r6) {
       
       df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
         mutate(Date = formatted_dates) %>% 
-        select(-formatted_dates)
+        select(-formatted_dates) 
+      
       
       columns_list = list(
         Date = colDef(minWidth = 165, align = "left", vAlign = "center"),
         date_use = colDef(show = F), 
-        Time = colDef(minWidth = 85, align = "center", style = list(fontSize = "20px"), vAlign = "center"), 
+        Time = colDef(minWidth = 85, align = "center", , vAlign = "center"), 
         HomeTeam = colDef(name = "Home Team", minWidth = 200, align = "right", vAlign = "center"),
         vs_col = colDef(name = "", minWidth = 40, align = "center", vAlign = "center"),
-        AwayTeam = colDef(name = "Away Team", minWidth = 200, vAlign = "center"),
+        AwayTeam = colDef(name = "Away Team", minWidth = 200, vAlign = "center", align = "left"),
         # Analyze column:
         analyze = colDef(
           name = "",
@@ -157,22 +157,49 @@ team_select_Server <- function(id, r6) {
       )
       
       if(r6$user_info$logged_in){
+        df_odds_open <- f_match_open_for_betting() %>% 
+          mutate(Bets = ifelse(bet_open, "Open", "Not Open")) %>% 
+          select(match_id, Bets)
+        
+        
         df_use <- df_use %>%
-          mutate(match_id = paste0(HomeTeam, "-", AwayTeam , "-", current_season_ending)) %>% 
+          
+          mutate(
+            season_ending = f_calc_season_ending(utc_date),
+            match_id = paste0(HomeTeam, "-", AwayTeam , "-", season_ending),
+          ) %>% 
+          left_join(df_odds_open) %>% 
+          
           left_join(
             r6$user_info$bets  %>% group_by(match_id) %>%
               summarise(`Active Bets` = n()) %>%
               ungroup()
           ) %>% 
-          select(-match_id)
+          mutate(
+            col_def = case_when(
+              Bets == "Open" ~ "#4CAF50",
+              Bets == "Not Open" ~ "#e22020",
+              T ~ "#4CAF50"
+            )
+          ) %>% 
+          select(-match_id, -season_ending)
+        
         
         if ("Active Bets" %in% names(df_use)){
-          columns_list$`Active Bets` <-  colDef(name = "Active bets", minWidth = 100, align = "center", style = list(fontSize = "20px"))
+          columns_list$`Active Bets` <-  colDef(name = "Active bets", minWidth = 100, align = "center", style = list(fontSize = "18px"))
         }
+        
+        columns_list$Bets <- colDef( minWidth = 110 , style = list(fontSize = "12px") , vAlign = "center",
+                                     cell = pill_buttons( data = df_use,
+                                                          color_ref  = "col_def",
+                                                          text_color = "white"  # White text color for contrast
+                                     )
+        )
+        
+        columns_list$col_def <-  colDef(show = F)
         
       }
       
-
       
       output$schedule_table <- renderReactable({
         reactable(df_use, 

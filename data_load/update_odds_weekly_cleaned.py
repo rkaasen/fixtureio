@@ -578,6 +578,20 @@ def lambda_handler(event, context):
             df_input=df_input
         )
         
+
+        # check if outcome home is lower than 15% and if so, set it to 15% + random
+        if outcome["Home"] < 15:
+            outcome["Home"] = 15 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+
+        # check if outcome Away is lower than 15% and if so, set it to 15% + random
+        if outcome["Away"] < 15:
+            outcome["Away"] = 15 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+            
+         # check if outcome Draw is lower than 19% and if so, set it to 19% + random
+        if outcome["Draw"] < 19:
+            outcome["Draw"] = 19 + pd.RangeIndex(0, 1000).to_series().sample(1).iloc[0].item() / 500
+            
+        
         # Append the calculated probabilities to the respective lists
         home_probs.append(outcome["Home"])
         away_probs.append(outcome["Away"])

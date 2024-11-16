@@ -25,6 +25,7 @@ library(uuid)
 
 library(reactable)
 library(reactable.extras)
+library(reactablefmtr)
 
 library(bsicons)
 
@@ -88,6 +89,7 @@ ui <- function(request) {
       tags$link(rel = "icon", type = "image/png", href = "fav_icon.png"),
       tags$script(src = "custom.js")  # Correctly links to the JavaScript file
     ),
+    
 
     # Container for positioning image and header
     div(
@@ -259,6 +261,7 @@ server <- function(input, output, session) {
   
   
   # Initialize triggers
+  init("test")
   init("button_to_estimation", "button_to_selection", "button_select_matchup")
   init("button_app", "button_HTU", "button_methodology", "button_data", "button_authors")
   init("teams_selected_from_table")
@@ -337,6 +340,14 @@ server <- function(input, output, session) {
   observeEvent(input$div_clicked_result_col, {
     trigger("open_analytics_card")
   })
+  
+  observeEvent(input$go_to_login_page, {
+
+    nav_select("navbar", "USER_PAGE")
+
+  })
+  
+
   
 
 }

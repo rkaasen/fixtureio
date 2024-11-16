@@ -140,6 +140,8 @@ login_Server <- function(id, r6) {
 
         r6$user_info$bets <- fetch_table_all_bets(r6)
         
+        update_last_logged_in_db(user_id)
+        
         trigger("user_logged_in")
         
       } else {

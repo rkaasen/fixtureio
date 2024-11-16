@@ -17,7 +17,7 @@ match_data_row_UI <- function(id) {
                     column(10, offset = 2, align = "right", 
                            plotOutput(NS(id,"form_home"), width = "150px", height = "40px")),
                     column(10, offset = 2, 
-                           div(h5(textOutput(NS(id,"home_team_league_rank")), style = "display: inline; font-weight: bold; margin-right: 5px;"), 
+                           div(h6(textOutput(NS(id,"home_team_league_rank")), style = "display: inline; font-weight: bold; margin-right: 5px;"), 
                                h6("in league",style = "display: inline;  margin-left: 0px;"),
                                style  = "display: inline-flex; align-items: right; "
                            )
@@ -52,7 +52,7 @@ match_data_row_UI <- function(id) {
                     
                     plotOutput(NS(id,"form_away"), width = "150px", height = "40px"),
                     column(10, offset = 2, 
-                           div(h5(textOutput(NS(id,"away_team_league_rank")), style = "display: inline; font-weight: bold; margin-right: 5px;"), 
+                           div(h6(textOutput(NS(id,"away_team_league_rank")), style = "display: inline; font-weight: bold; margin-right: 5px;"), 
                                h6("in league",style = "display: inline;  margin-left: 0px;"),
                                style  = "display: inline-flex; align-items: left; "
                            )
