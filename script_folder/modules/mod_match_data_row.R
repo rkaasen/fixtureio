@@ -37,7 +37,9 @@ match_data_row_UI <- function(id) {
                     h5(textOutput(NS(id, "date"))),
                     h5(textOutput(NS(id, "time"))),
                     hidden(div(id = NS(id, "hide_row"), h5("YOUR ESTIMATED OUTCOME:"))),
-                    plotOutput(NS(id,"ggplot_overall_percent"), width = "100%", height = "90px")
+                    div( id = NS(id,"ggplot_overall_percent_div"), class = "clickable-border",
+                         plotOutput(NS(id,"ggplot_overall_percent"), width = "100%", height = "90px")
+                    )
              ),
              
              # LOGO AWAY TEAM

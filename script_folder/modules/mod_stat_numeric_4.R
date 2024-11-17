@@ -57,7 +57,7 @@ estimation_page_stats_numeric_UI <- function(id, header = "DEFAULT_HEADER", h2h 
                      
                      column(width = 2, offset = 0, align = "left",
                             column(10, offset = 2,
-
+                                   
                                    div(
                                      style = "margin-bottom: 0px;",  # adjust margin
                                      
@@ -76,14 +76,18 @@ estimation_page_stats_numeric_UI <- function(id, header = "DEFAULT_HEADER", h2h 
                             )
                      ),
                      
-                     column(width = 6, offset = 0, align = "center",
-                            column(width = 12,align = "center",
+                     column(width = 4, offset = 1, align = "center",
+                            column(width = 12,align = "center", 
+                                   
                                    div(style = "height: 10px;"),
-                                   plotOutput(NS(id,"ggplot_divergent"), width = "80%", height = "70px")
+                                   div( id = NS(id,"ggplot_divergent_div"), style = "cursor: pointer;", class = "clickable-border",
+                                       plotOutput(NS(id,"ggplot_divergent"), width = "100%", height = "70px")
+                                   )
+                                   
                             ),
                             
                      ),
-                     column(width = 3, offset =  0, align = "left",
+                     column(width = 3, offset =  1, align = "left",
                             column(6, offset = 2,
                                    div(style = "height: 20px;"),
                                    sliderTextInput(NS(id,"Slider"),choices = paste0(seq(0,200,25), "%"), label = NULL, selected = "100%", width = "120%"),
@@ -135,134 +139,134 @@ estimation_page_stats_numeric_Server <- function(id, r6,
                                                  home_away = F) {
   moduleServer(id, function(input, output, session) {
     
-
-
+    
+    
     if (header == "DEFAULT") {
       header <- id
     }
     # init lis. Will be overwritten
     l_perc_results <- list()
-
+    
     previous_n_matches <- reactiveVal(NULL)
     previous_button_to_estimation <- reactiveVal(1)
-
+    
     observe({
       previous_n_matches <- reactiveVal(input$n_matches)
-
+      
     })
-
-
-
+    
+    
+    
     observeEvent(input$games_3_btn, ignoreInit = T, {
-
-
+      
+      
       if(h2h | home_away){
-
+        
         updateRadioButtons(
           session = session,
           inputId = "n_matches",
           selected = 3
         )
-
+        
       } else {
         updateRadioButtons(
           session = session,
           inputId = "n_matches",
           selected = 5
-          )
+        )
       }
-
+      
     })
-
-
+    
+    
     if(h2h | home_away){
       output$lower_n_games_text <- renderText("Set #games to 3")
     }else {
       output$lower_n_games_text <- renderText("Set #games to 5")
     }
-
+    
     # SERVER:
     observeEvent(list(input$n_matches,watch("button_to_estimation"), watch("new_stats_chosen")),ignoreInit = T, {
-
-
+      
+      
       if (id %in% r6$chosen_stats_list_changed) {
         added_or_removed <- reactiveVal(TRUE)
       } else {
         added_or_removed <- reactiveVal(FALSE)
       }
-
+      
       if(! id %in% r6$chosen_stats_list) {
         # If stat not chosen
-
+        
         if(added_or_removed()){
-
+          
           shinyjs::hide("hide_all")
-
+          
           r6$metrics[[id]]$weight <- "0%"
           r6$metrics[[id]]$home_team_perc <-0
           r6$metrics[[id]]$away_team_perc <- 0
           r6$metrics[[id]]$draw_team_perc <- 0
           trigger("update_main_prediction")
         }
-
+        
       } else{
-
+        
         # Check for h2h that we have enough data:
-
+        
         # calculate all metrics
         n_matches = input$n_matches %>% as.numeric()
-
+        
         if(h2h){
           h2h_teams = c(r6$selected_home_team, r6$selected_away_team)
         } else{ h2h_teams = "SKIP" }
-
+        
         metrics_df <- f_metrics_league(r6$data$filtered, n_matches = n_matches, h2h_teams = h2h_teams, home_away = home_away) %>%
           filter(metric == metric_name)
-
+        
         # filter to metriC and hometeam
-
+        
         if(home_away){
           home_team_matches  = metrics_df %>%
             filter(
               Team==r6$selected_home_team,
               home_away == "home"
             ) %>% pull(n_matches_in_sample)
-
+          
           # filter to metriC and awayteam
           away_team_matches  = metrics_df %>%
             filter(
               Team==r6$selected_away_team,
               home_away == "away"
             ) %>% pull(n_matches_in_sample)
-
+          
         } else{
           home_team_matches  = metrics_df %>%
             filter(
               Team==r6$selected_home_team
             ) %>% pull(n_matches_in_sample)
-
+          
           # filter to metriC and awayteam
           away_team_matches  = metrics_df %>%
             filter(
               Team==r6$selected_away_team
             ) %>% pull(n_matches_in_sample)
-
+          
         }
-
+        
         if(length(away_team_matches) == 0){
           away_team_matches = 0
         }
         if(length(home_team_matches) == 0){
           away_team_matches = 0
         }
-
+        
         if((away_team_matches) < n_matches || (home_team_matches) < n_matches) {
           # NOT ENOUGH MATCHES
-
+          
           shinyjs::show("hide_all")
           shinyjs::hide("hide_stat")
           shinyjs::show("not_enough_data")
-
+          
           if(h2h | home_away){
             if (n_matches == 5){
               shinyjs::show("set_n_games_row")
@@ -270,32 +274,32 @@ estimation_page_stats_numeric_Server <- function(id, r6,
           }else if (n_matches==10) {
             shinyjs::show("set_n_games_row")
           }
-
+          
           output$not_enough_data_text = renderText(glue('"{header}"'))
-
+          
           r6$metrics[[id]]$weight <- "0%"
           r6$metrics[[id]]$home_team_perc <-0
           r6$metrics[[id]]$away_team_perc <- 0
           r6$metrics[[id]]$draw_team_perc <- 0
           trigger("update_main_prediction")
-
-
+          
+          
         } else {
           # STAT TO BE INCLUDED:
-
+          
           shinyjs::show("hide_all")
           shinyjs::show("hide_stat")
           shinyjs::hide("not_enough_data")
-
+          
           # make sure we need to do all re calculations:
-
+          
           # print(gargoyle::watch("button_to_estimation"))
           # print(previous_button_to_estimation())
-
+          
           # print( "__________________________________________")
-
+          
           if(gargoyle::watch("button_to_estimation") != previous_button_to_estimation() || added_or_removed()==TRUE || input$n_matches != isolate(previous_n_matches())) {
-
+            
             # print(id)
             #
             # if(gargoyle::watch("button_to_estimation") != previous_button_to_estimation()){
@@ -305,23 +309,23 @@ estimation_page_stats_numeric_Server <- function(id, r6,
             # } else if(input$n_matches != isolate(previous_n_matches())){
             #   print("C")
             # }
-
+            
             # print(id)
-
+            
             # Make string for header
             output$n_matches_string = renderText(glue("Latest {input$n_matches} Matches"))
-
+            
             # Take n_matches as numeric
             n_matches = input$n_matches %>% as.numeric()
-
+            
             if(h2h){
               h2h_teams = c(r6$selected_home_team, r6$selected_away_team)
             } else{ h2h_teams = "SKIP" }
-
+            
             # calculate all metrics
             metrics_df <- f_metrics_league(r6$data$filtered, n_matches = n_matches, h2h_teams = h2h_teams, home_away= home_away) %>%
               filter(metric == metric_name)
-
+            
             if(home_away) {
               # filter to metriC and hometeam
               home_team_df  = metrics_df %>%
@@ -329,7 +333,7 @@ estimation_page_stats_numeric_Server <- function(id, r6,
                   Team==r6$selected_home_team,
                   home_away == "home"
                 )
-
+              
               # filter to metriC and awayteam
               away_team_df  = metrics_df %>%
                 filter(
@@ -342,17 +346,17 @@ estimation_page_stats_numeric_Server <- function(id, r6,
                 filter(
                   Team==r6$selected_home_team,
                 )
-
+              
               # filter to metriC and awayteam
               away_team_df  = metrics_df %>%
                 filter(
                   Team==r6$selected_away_team,
                 )
             }
-
+            
             # ~~~~~~~~~~~~~~~~~~~~
             # MAKE GGPLOTS
-
+            
             # RUN FUNCTION FOR PERCENTAGES + PLOT:
             l_perc_results <- f_plot_winning_prediction_percent(Home_rank = home_team_df$rank,
                                                                 Away_rank = away_team_df$rank,
@@ -360,11 +364,11 @@ estimation_page_stats_numeric_Server <- function(id, r6,
                                                                 Home_label = r6$selected_home_team_short,
                                                                 Away_label = r6$selected_home_away_short,
                                                                 return_plot = F
-
+                                                                
             )
-
+            
             # MAIN PLOT:
-
+            
             output$ggplot_divergent = renderPlot({
               f_plot_divergent_bar(metrics_df = metrics_df,
                                    home_team = r6$selected_home_team,
@@ -373,191 +377,202 @@ estimation_page_stats_numeric_Server <- function(id, r6,
                                    home_away = home_away
               )
             }, bg="transparent")
-
-
+            
+            
             r6$metrics[[id]]$weight <- input$Slider
             r6$metrics[[id]]$home_team_perc <- l_perc_results$home_team_perc
             r6$metrics[[id]]$away_team_perc <- l_perc_results$away_team_perc
             r6$metrics[[id]]$draw_team_perc <- 100 - l_perc_results$away_team_perc - l_perc_results$home_team_perc
             trigger("update_main_prediction")
-
-
+            
+            
             previous_n_matches(input$n_matches)
             previous_button_to_estimation(watch("button_to_estimation"))
-
+            
           }
         }
       }
-
-
-
+      
+      
+      
     })
-
+    
     observeEvent(input$Slider, ignoreInit = T,{
       r6$metrics[[id]]$weight <- input$Slider
       trigger("update_main_prediction")
     })
-
+    
     # modal:
     observeEvent( input$compare_btn, {
-
-      # Take n_matches as numeric
-      n_matches = input$n_matches %>% as.numeric()
-
-      if(h2h){
-        h2h_teams = c(r6$selected_home_team, r6$selected_away_team)
-      } else{ h2h_teams = "SKIP" }
-
-      # calculate all metrics
-      metrics_df <- f_metrics_league(r6$data$filtered, n_matches = n_matches, h2h_teams = h2h_teams, home_away = home_away) %>%
-        filter(metric == metric_name)
-
-
-      if(home_away){
-        home_team_df  = metrics_df %>%
-          filter(
-            Team==r6$selected_home_team,
-            home_away == "home"
-          )
-
-
-        # filter to metriC and awayteam
-        away_team_df  = metrics_df %>%
-          filter(
-            Team==r6$selected_away_team,
-            home_away == "away"
-          )
-
-
-        output$ggplot_bar_home = renderPlot({
-          f_plot_ranks(metrics_df = metrics_df,
-                       home_team = r6$selected_home_team,
-                       away_team = r6$selected_away_team,
-                       positive_metric_plot = positive_metric,
-                       home_away_value = "home"
-          )
+      r6$stat_modal_id <- id
+      trigger("compare_btn_click")
+      
+    })
+    
+    observeEvent(list(watch("divergent_click"), watch("divergent_click")), ignoreInit = T, {
+      
+      shinyjs::removeClass(id = "ggplot_divergent_div", class = "clickable-border")
+      
+      if(r6$stat_modal_id == id){
+        
+        # Take n_matches as numeric
+        n_matches = input$n_matches %>% as.numeric()
+        
+        if(h2h){
+          h2h_teams = c(r6$selected_home_team, r6$selected_away_team)
+        } else{ h2h_teams = "SKIP" }
+        
+        # calculate all metrics
+        metrics_df <- f_metrics_league(r6$data$filtered, n_matches = n_matches, h2h_teams = h2h_teams, home_away = home_away) %>%
+          filter(metric == metric_name)
+        
+        
+        if(home_away){
+          home_team_df  = metrics_df %>%
+            filter(
+              Team==r6$selected_home_team,
+              home_away == "home"
+            )
+          
+          
+          # filter to metriC and awayteam
+          away_team_df  = metrics_df %>%
+            filter(
+              Team==r6$selected_away_team,
+              home_away == "away"
+            )
+          
+          
+          output$ggplot_bar_home = renderPlot({
+            f_plot_ranks(metrics_df = metrics_df,
+                         home_team = r6$selected_home_team,
+                         away_team = r6$selected_away_team,
+                         positive_metric_plot = positive_metric,
+                         home_away_value = "home"
+            )
+          }, bg="transparent")
+          
+          output$ggplot_bar_away = renderPlot({
+            f_plot_ranks(metrics_df = metrics_df,
+                         home_team = r6$selected_home_team,
+                         away_team = r6$selected_away_team,
+                         positive_metric_plot = positive_metric,
+                         home_away_value = "away"
+            )
+          }, bg="transparent")
+          
+          
+        } else{
+          home_team_df  = metrics_df %>%
+            filter(
+              Team==r6$selected_home_team,
+            )
+          
+          # filter to metriC and awayteam
+          away_team_df  = metrics_df %>%
+            filter(
+              Team==r6$selected_away_team,
+            )
+          
+          output$ggplot_bar = renderPlot({
+            f_plot_ranks(metrics_df = metrics_df,
+                         home_team = r6$selected_home_team,
+                         away_team = r6$selected_away_team,
+                         positive_metric_plot = positive_metric
+            )
+          }, bg="transparent")
+          
+        }
+        
+        # RUN FUNCTION FOR PERCENTAGES + PLOT:
+        l_perc_results <- f_plot_winning_prediction_percent(Home_rank = home_team_df$rank,
+                                                            Away_rank = away_team_df$rank,
+                                                            range = (metrics_df$rank %>% max - metrics_df$rank %>% min),
+                                                            Home_label = r6$selected_home_team_short,
+                                                            Away_label = r6$selected_away_team_short
+                                                            
+        )
+        
+        output$ggplot_percent = renderPlot({
+          l_perc_results$plot
         }, bg="transparent")
-
-        output$ggplot_bar_away = renderPlot({
-          f_plot_ranks(metrics_df = metrics_df,
-                       home_team = r6$selected_home_team,
-                       away_team = r6$selected_away_team,
-                       positive_metric_plot = positive_metric,
-                       home_away_value = "away"
-          )
-        }, bg="transparent")
-
-
-      } else{
-        home_team_df  = metrics_df %>%
-          filter(
-            Team==r6$selected_home_team,
-          )
-
-        # filter to metriC and awayteam
-        away_team_df  = metrics_df %>%
-          filter(
-            Team==r6$selected_away_team,
-          )
-
-        output$ggplot_bar = renderPlot({
-          f_plot_ranks(metrics_df = metrics_df,
-                       home_team = r6$selected_home_team,
-                       away_team = r6$selected_away_team,
-                       positive_metric_plot = positive_metric
-          )
-        }, bg="transparent")
-
-      }
-
-      # RUN FUNCTION FOR PERCENTAGES + PLOT:
-      l_perc_results <- f_plot_winning_prediction_percent(Home_rank = home_team_df$rank,
-                                                          Away_rank = away_team_df$rank,
-                                                          range = (metrics_df$rank %>% max - metrics_df$rank %>% min),
-                                                          Home_label = r6$selected_home_team_short,
-                                                          Away_label = r6$selected_away_team_short
-
-      )
-
-      output$ggplot_percent = renderPlot({
-        l_perc_results$plot
-      }, bg="transparent")
-
-
-      output$logo_ht <- renderUI({
-        img(src = paste0("Logos/", r6$selected_home_team, ".png"), height = "80%", width = "80%")
-      })
-      output$logo_at <- renderUI({
-        img(src = paste0("Logos/", r6$selected_away_team, ".png"), height = "80%", width = "80%")
-      })
-
-      showModal(
-
-        tagList(
-          tags$style(HTML("
+        
+        
+        output$logo_ht <- renderUI({
+          img(src = paste0("Logos/", r6$selected_home_team, ".png"), height = "80%", width = "80%")
+        })
+        output$logo_at <- renderUI({
+          img(src = paste0("Logos/", r6$selected_away_team, ".png"), height = "80%", width = "80%")
+        })
+        
+        showModal(
+          
+          tagList(
+            tags$style(HTML("
         .modal-dialog {
           width: 50vw !important;
           max-width: 80vw !important;
         }
       ")),
-
-          modalDialog(
-            title = paste0("Details for  ", header),
-
-            if(home_away){
-              column(width = 12, align = "center",
-                     h5(paste0(header, "  at HOME compared to league at HOME:")),
-                     fluidRow(
-                       column(2, align = "right",
-                              uiOutput(session$ns("logo_ht"), width = "65%")
+            
+            modalDialog(
+              title = paste0("Details for  ", header),
+              
+              if(home_away){
+                column(width = 12, align = "center",
+                       h5(paste0(header, "  at HOME compared to league at HOME:")),
+                       fluidRow(
+                         column(2, align = "right",
+                                uiOutput(session$ns("logo_ht"), width = "65%")
+                         ),
+                         column(10,
+                                plotOutput(session$ns("ggplot_bar_home"), width = "80%", height = "250px"),
+                         )
                        ),
-                       column(10,
-                              plotOutput(session$ns("ggplot_bar_home"), width = "80%", height = "250px"),
-                       )
-                     ),
-                     br(),
-                     h5(paste0(header, "  AWAY compared to league at AWAY:")),
-                     fluidRow(
-                       column(2, align = "right",
-                              uiOutput(session$ns("logo_at"), width = "65%")
+                       br(),
+                       h5(paste0(header, "  AWAY compared to league at AWAY:")),
+                       fluidRow(
+                         column(2, align = "right",
+                                uiOutput(session$ns("logo_at"), width = "65%")
+                         ),
+                         column(10,
+                                plotOutput(session$ns("ggplot_bar_away"), width = "80%", height = "250px"),
+                         )
                        ),
-                       column(10,
-                              plotOutput(session$ns("ggplot_bar_away"), width = "80%", height = "250px"),
-                       )
-                     ),
-
-
-              )
-            }else {
-
+                       
+                       
+                )
+              }else {
+                
+                column(width = 12, align = "center",
+                       h5(paste0("Comparison of ", header, " to league:")),
+                       plotOutput(session$ns("ggplot_bar"), width = "80%", height = "300px")
+                )
+              },
+              
+              hr(),
               column(width = 12, align = "center",
-                     h5(paste0("Comparison of ", header, " to league:")),
-                     plotOutput(session$ns("ggplot_bar"), width = "80%", height = "300px")
-              )
-            },
-
-            hr(),
-            column(width = 12, align = "center",
-                   h5(paste0("Contribution of ", header, " only:")),
-                   plotOutput(session$ns("ggplot_percent"), width = "65%", height = "125px"),
-            ),
-            easyClose = TRUE,  # Allows closing the modal by clicking outside
-            footer = tagList(
-              modalButton("Close"),  # A button to close the modal
-            ),
-            # size = "l"
-
-          ))
-      )
-
-    }, ignoreInit = T
+                     h5(paste0("Contribution of ", header, " only:")),
+                     plotOutput(session$ns("ggplot_percent"), width = "65%", height = "125px"),
+              ),
+              easyClose = TRUE,  # Allows closing the modal by clicking outside
+              footer = tagList(
+                modalButton("Close"),  # A button to close the modal
+              ),
+              # size = "l"
+              
+            ))
+        )
+      }
+      
+      
+    }
     )
     
     
     
-    
     # }
-
+    
     # }) # observe on output trigger
     
   }) # module

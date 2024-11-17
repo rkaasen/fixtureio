@@ -87,7 +87,7 @@ ui <- function(request) {
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
       tags$link(rel = "icon", type = "image/png", href = "fav_icon.png"),
-      tags$script(src = "custom.js")  # Correctly links to the JavaScript file
+      tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
     ),
     
 
@@ -122,7 +122,7 @@ ui <- function(request) {
           useShinyjs(),
           tags$head(
             tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
-            tags$script(src = "custom.js")
+            tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
           ),
 
           tabsetPanel(
@@ -168,7 +168,7 @@ ui <- function(request) {
           useShinyjs(),
           tags$head(
             tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
-            tags$script(src = "custom.js")
+            tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
           ),
           
           tabsetPanel(
@@ -270,6 +270,7 @@ server <- function(input, output, session) {
   init("full_screen_card_closed")
   init("open_analytics_card_home", "open_analytics_card", "open_analytics_card_away")
   init("user_logged_in", "user_logged_out")
+  init("divergent_click", "compare_btn_click")
 
   # Read modules
   button_to_estimation_Server("button_on_selection_tab")
@@ -342,12 +343,17 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$go_to_login_page, {
-
     nav_select("navbar", "USER_PAGE")
-
   })
   
+observeEvent(input$div_clicked_divergent, ignoreInit =  T, {
 
+  str_without_number <- strsplit(input$div_clicked_divergent, "--")[[1]][1]
+  id_clicked <- strsplit(str_without_number, "-")[[1]][2]
+  
+  r6$stat_modal_id <- id_clicked
+  trigger("divergent_click")
+})
   
 
 }

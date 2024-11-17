@@ -660,7 +660,7 @@ border-radius: 0px;
   width: 100vw; /* Full viewport width */
   height: 100vh; /* Full viewport height */
   background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white overlay */
-/*  z-index: 9999; Ensures it stays on top */
+  z-index: 9999; Ensures it stays on top 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -673,5 +673,25 @@ border-radius: 0px;
 }
 
 
+/* Clickable element border */
 
+.clickable-border {
+  position: relative; /* To handle the border animation properly */
+  cursor: pointer; /* Makes it clear that the element is clickable */
+  border: 1px solid transparent; /* Default border */
+  animation: pulse-border 2s infinite; /* Apply the animation */
+  border-radius: 8px; /* Optional: round the corners */
+}
+
+@keyframes pulse-border {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.5); /* Initial glow */
+  }
+  50% {
+    box-shadow: 0 0 2px 1px rgba(0, 123, 255, 0.75); /* Stronger glow */
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.5); /* Back to initial glow */
+  }
+}
 

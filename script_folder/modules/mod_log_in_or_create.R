@@ -1,8 +1,6 @@
 # login_module.R
 
 login_UI <- function(id) {
-  # tagList(
-  
   fluidPage(
     
     hidden(
@@ -14,7 +12,6 @@ login_UI <- function(id) {
     fluidRow(
       
       style = "display: flex; align-items: flex-start; justify-content: center; padding-top: 20px;",
-      # div(style  = "height: 20px;"),
       fluidRow(
         column(
           width = 6, 
@@ -26,9 +23,11 @@ login_UI <- function(id) {
           div(
             id = NS(id, "login_div"),
             h2("Welcome Back!"),
-            textInput(NS(id, "username"), "Username"),      # Using default Shiny input
-            passwordInput(NS(id, "password"), "Password"),  # Using default Shiny input
-            actionButton(NS(id, "login_btn"), "Log In", class = "reactable-button"),
+            tags$form(
+              textInput(NS(id, "username"), "Username"),      # Using default Shiny input
+              passwordInput(NS(id, "password"), "Password"),  # Using default Shiny input
+              actionButton(NS(id, "login_btn"), "Log In", class = "reactable-button")
+            ),
             br(), div(style = "height: 10px;"),
             actionLink(NS(id, "show_signup"), "Not a user yet? Sign up"),
             br(), div(style = "height: 10px;"),
@@ -40,9 +39,11 @@ login_UI <- function(id) {
             id = NS(id, "signup_div"),
             style = "display: none;",
             h2("Create an Account"),
-            textInput(NS(id, "new_username"), "Choose a Username"),       # Default Shiny input
-            passwordInput(NS(id, "new_password"), "Choose a Password"),   # Default Shiny input
-            textInput(NS(id, "email"), "Email (optional)", placeholder = "For password recovery and security"),
+            tags$form(
+              textInput(NS(id, "new_username"), "Choose a Username"),       # Default Shiny input
+              passwordInput(NS(id, "new_password"), "Choose a Password"),   # Default Shiny input
+              textInput(NS(id, "email"), "Email (optional)", placeholder = "For password recovery and security")
+            ),
             div(class = "note-text", "We respect your privacy. No spam, just for account recovery."),
             actionButton(NS(id, "signup_btn"), "Sign Up", class = "btn-success btn-lg btn-block"),
             br(), div(style = "height: 10px;"),
@@ -55,7 +56,6 @@ login_UI <- function(id) {
       
     )
   )
-  # )
 }
 
 

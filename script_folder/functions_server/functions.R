@@ -548,39 +548,39 @@ format_bets_for_match_bets <- function(bets, match_id_input) {
   
 }
 
-# fetch_table_all_bets <- function(r6) {
-#   
-#   # Establish the connection
-#   con <- dbConnect(
-#     RPostgres::Postgres(),
-#     host = Sys.getenv("DB_HOST"),
-#     dbname = Sys.getenv("DB_NAME"),
-#     user = Sys.getenv("DB_USER"),
-#     password = Sys.getenv("DB_PASSWORD"),
-#     port = Sys.getenv("DB_PORT", "5432")
-#   )
-#   
-#   # Ensure connection closes at the end of the function, even if an error occurs
-#   on.exit(dbDisconnect(con), add = TRUE)
-#   
-#   query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
-#   all_bets <- dbGetQuery(con, query, 
-#                          list(r6$user_info$user_id
-#                          )
-#   ) 
-#   
-#   
-#   all_bets <- all_bets %>% 
-#     mutate(
-#       placed_local = with_tz(placed, tzone = Sys.timezone()),
-#       placed = format(placed_local, "%Y-%m-%d %H:%M")
-#     ) %>% 
-#     arrange(placed) %>% 
-#     select(-placed_local)
-#   
-#   return(all_bets)
-#   
-# }
+fetch_table_all_bets <- function(r6) {
+
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+
+  query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query,
+                         list(r6$user_info$user_id
+                         )
+  )
+
+
+  all_bets <- all_bets %>%
+    mutate(
+      placed_local = with_tz(placed, tzone = Sys.timezone()),
+      placed = format(placed_local, "%Y-%m-%d %H:%M")
+    ) %>%
+    arrange(placed) %>%
+    select(-placed_local)
+
+  return(all_bets)
+
+}
 
 # fetch_total_bets_on_match <- function(match_id_input) {
 #   

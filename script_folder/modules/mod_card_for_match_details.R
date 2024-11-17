@@ -53,9 +53,9 @@ card_for_match_details_UI <- function(id) {
                                   ),
                                   column(4,
                                          fluidRow(
-                                           column(2, offset = 1, align = "middle", h3(textOutput(NS(id,"fair_home")), style = "color: white;")),
-                                           column(2, offset = 2, align = "middle", h3(textOutput(NS(id,"fair_draw")), style = "color: white;")),
-                                           column(2, offset = 2, align = "middle", h3(textOutput(NS(id,"fair_away")), style = "color: white;")),
+                                           column(2, offset = 1, align = "middle", h4(textOutput(NS(id,"fair_home")), style = "color: white;")),
+                                           column(2, offset = 2, align = "middle", h4(textOutput(NS(id,"fair_draw")), style = "color: white;")),
+                                           column(2, offset = 2, align = "middle", h4(textOutput(NS(id,"fair_away")), style = "color: white;")),
                                          )),
                                   column(2, offset = 0, align = "right", div(style = "height: 12px;"),
                                          h5("Not live yet: ", style = "color: white;"),
@@ -89,9 +89,9 @@ card_for_match_details_UI <- function(id) {
                                             ),
                                             column(4,
                                                    fluidRow(
-                                                     column(2, offset = 1, align = "middle", actionButton(NS(id,"btn_home_odds"), textOutput(NS(id,"home_odds")), class = "odds-button-same")),
-                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_draw_odds"), textOutput(NS(id,"draw_odds")), class = "odds-button-better")),
-                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_away_odds"), textOutput(NS(id,"away_odds")), class = "odds-button-worse"))
+                                                     column(2, offset = 1, align = "middle", actionButton(NS(id,"btn_home_odds"), textOutput(NS(id,"home_odds")))),
+                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_draw_odds"), textOutput(NS(id,"draw_odds")))),
+                                                     column(2, offset = 2, align = "middle", actionButton(NS(id,"btn_away_odds"), textOutput(NS(id,"away_odds"))))
                                                    ))
                                             
                                             
@@ -197,6 +197,10 @@ card_for_match_details_Server <- function(id, r6) {
     draw_odds <- reactiveVal(NULL)
     away_odds <- reactiveVal(NULL)
     
+    fair_home_odds <- reactiveVal(NULL)
+    fair_draw_odds <- reactiveVal(NULL)
+    fair_away_odds <- reactiveVal(NULL)
+    
     to_win <- reactiveVal(NULL)
     to_win_odds <- reactiveVal(NULL)
     
@@ -244,6 +248,10 @@ card_for_match_details_Server <- function(id, r6) {
     
     
     observeEvent(list(input$external_toggle,watch("open_analytics_card_home"), watch("open_analytics_card_away"), watch("open_analytics_card")), ignoreInit = T, {
+      
+      shinyjs::removeClass(id = "top_of_estimation_tab-card_module-in_main_card-ggplot_overall_percent_div", class = "clickable-border", asis = T)
+      shinyjs::removeClass(id = "top_of_estimation_tab-in_main_page-ggplot_overall_percent_div", class = "clickable-border", asis = T)
+      
       home_team <- r6$selected_home_team
       away_team <- r6$selected_away_team
       
@@ -325,12 +333,13 @@ card_for_match_details_Server <- function(id, r6) {
       draw_perc = overall_percentages[2]
       away_perc = overall_percentages[3]
       
-      output$fair_home <- renderText(round(100/home_perc,2))
-      output$fair_draw <- renderText(round(100/draw_perc,2))
-      output$fair_away <- renderText(round(100/away_perc,2))
+      fair_home_odds(round(100/home_perc,2))
+      fair_draw_odds(round(100/draw_perc,2))
+      fair_away_odds(round(100/away_perc,2))
       
-      
-      
+      output$fair_home <- renderText(fair_home_odds())
+      output$fair_draw <- renderText(fair_draw_odds())
+      output$fair_away <- renderText(fair_away_odds())
       
     })
     
@@ -338,28 +347,8 @@ card_for_match_details_Server <- function(id, r6) {
       
       shinyjs::show("your_odds_row")
       
-      # match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
-      
-      # show pie
-      
-      l_bets <- fetch_total_bets_on_match(match_id_chosen())
-      
-      output$pie_chart <- renderPlotly({
-        f_pie_n_bets(
-          list_n_bets = l_bets, 
-          list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
-        )
-      })
-      
-      # show odds active on the match  
-      output$your_bets_table <- renderReactable({
-        f_your_bets_table(r6)
-      })
-      
-      
       # IS BET OPEN?
-     
-      
+
       bet_open <- f_match_open_for_betting() %>% 
         filter(match_id == match_id_chosen()) %>% 
         pull(bet_open)
@@ -371,8 +360,7 @@ card_for_match_details_Server <- function(id, r6) {
         )
       
       if(bet_open){
-        print("set button vals")
-        
+
         home_perc_bet <- odds_row %>% pull(`Home Win Probability (%)`)
         away_perc_bet <- odds_row %>% pull(`Away Win Probability (%)`)
         draw_perc_bet <- odds_row %>% pull(`Draw Probability (%)`)
@@ -385,6 +373,31 @@ card_for_match_details_Server <- function(id, r6) {
         output$home_odds <- renderText(round(as.numeric(home_odds()),2))
         output$away_odds <- renderText(round(as.numeric(away_odds()),2))
         output$draw_odds <- renderText(round(as.numeric(draw_odds()),2))
+        
+        if(home_odds()-fair_home_odds() > 0.2){
+          shinyjs::addClass(id = "btn_home_odds", class = "odds-button-better")
+        } else if(home_odds()-fair_home_odds() < 0.2){
+          shinyjs::addClass(id = "btn_home_odds", class = "odds-button-worse")
+        } else{
+          shinyjs::addClass(id = "btn_home_odds", class = "odds-button-same")
+        }
+        
+        if(draw_odds()-fair_draw_odds() > 0.2){
+          shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-better")
+        } else if(draw_odds()-fair_draw_odds() < 0.2){
+          shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-worse")
+        } else{
+          shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-same")
+        }
+        
+        if(away_odds()-fair_away_odds() > 0.2){
+          shinyjs::addClass(id = "btn_away_odds", class = "odds-button-better")
+        } else if(away_odds()-fair_away_odds() < 0.2){
+          shinyjs::addClass(id = "btn_away_odds", class = "odds-button-worse")
+        } else{
+          shinyjs::addClass(id = "btn_away_odds", class = "odds-button-same")
+        }
+        
       }
       
       
