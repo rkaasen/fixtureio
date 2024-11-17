@@ -195,6 +195,34 @@ $(document).on("shiny:connected", function() {
 
 
 
+/* enter to log in */
+
+$(document).ready(function() {
+  // Listen for "Enter" key on the username or password fields
+  $(document).on('keydown', function(e) {
+    if (e.key === 'Enter') {
+      
+      console.log("Enter Button Clicked");
+      
+      // Check if focus is on either the username or password input
+      if ($('#login_page-username').is(':focus') || $('#login_page-password').is(':focus')) {
+        
+        console.log("focus was correct");
+        
+        // Trigger the login button click
+        $('#login_page-login_btn').click();
+        
+        setTimeout(function() {
+          $('#login_page-login_btn').click();
+        }, 100); // 100 ms delay
+        
+        
+      }
+    }
+  });
+});
+
+
 
 
 // is hometeam, middle or away team clicked?

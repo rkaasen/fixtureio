@@ -507,7 +507,7 @@ cancel_bet_in_db <- function(bet_id,  new_cancelled = TRUE) {
   
   # Ensure connection closes at the end of the function, even if an error occurs
   on.exit(dbDisconnect(con), add = TRUE)
-
+  
   
   # Build the SQL update query
   sql <- paste0(
@@ -549,6 +549,40 @@ format_bets_for_match_bets <- function(bets, match_id_input) {
 }
 
 fetch_table_all_bets <- function(r6) {
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query,
+                         list(r6$user_info$user_id
+                         )
+  )
+  
+  
+  all_bets <- all_bets %>%
+    mutate(
+      placed_local = with_tz(placed, tzone = Sys.timezone()),
+      placed = format(placed_local, "%Y-%m-%d %H:%M")
+    ) %>%
+    arrange(placed) %>%
+    select(-placed_local)
+  
+  return(all_bets)
+  
+}
+
+fetch_total_bets_on_match <- function(match_id_input) {
 
   # Establish the connection
   con <- dbConnect(
@@ -563,59 +597,25 @@ fetch_table_all_bets <- function(r6) {
   # Ensure connection closes at the end of the function, even if an error occurs
   on.exit(dbDisconnect(con), add = TRUE)
 
-  query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
-  all_bets <- dbGetQuery(con, query,
-                         list(r6$user_info$user_id
-                         )
-  )
+  query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
+  all_bets <- dbGetQuery(con, query)
 
 
-  all_bets <- all_bets %>%
-    mutate(
-      placed_local = with_tz(placed, tzone = Sys.timezone()),
-      placed = format(placed_local, "%Y-%m-%d %H:%M")
-    ) %>%
-    arrange(placed) %>%
-    select(-placed_local)
 
-  return(all_bets)
+  match_bets <- all_bets %>% filter(match_id == match_id_input)
 
+  split_text <- strsplit(match_id_input, "-")[[1]]
+  home_team_input <- split_text[1]
+  away_team_input <- split_text[2]
+
+
+  match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
+  match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
+  match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
+
+  l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
+  return(l_bets)
 }
-
-# fetch_total_bets_on_match <- function(match_id_input) {
-#   
-#   # Establish the connection
-#   con <- dbConnect(
-#     RPostgres::Postgres(),
-#     host = Sys.getenv("DB_HOST"),
-#     dbname = Sys.getenv("DB_NAME"),
-#     user = Sys.getenv("DB_USER"),
-#     password = Sys.getenv("DB_PASSWORD"),
-#     port = Sys.getenv("DB_PORT", "5432")
-#   )
-#   
-#   # Ensure connection closes at the end of the function, even if an error occurs
-#   on.exit(dbDisconnect(con), add = TRUE)
-#   
-#   query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
-#   all_bets <- dbGetQuery(con, query)
-# 
-#   
-#   
-#   match_bets <- all_bets %>% filter(match_id == match_id_input)
-#   
-#   split_text <- strsplit(match_id_input, "-")[[1]]
-#   home_team_input <- split_text[1]  
-#   away_team_input <- split_text[2]  
-# 
-#   
-#   match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
-#   match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
-#   match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
-#   
-#   l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
-#   return(l_bets)
-# }
 
 
 
@@ -693,7 +693,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     user_id = r6$user_info$user_id
     bets_df = r6$user_info$bets
     bets_week_starting = r6$user_info$bets_week_starting
-    match_id_input = "Ipswich-Man United-2025"
+    match_id_input = "Fulham-Wolves-2025"
   }
   
   
@@ -718,8 +718,9 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
   
   
   # DOWNLOAD ALL BETS
-  query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
+  query <- "SELECT bet, match_id, odds FROM bets WHERE cancelled = FALSE"
   all_bets <- dbGetQuery(con, query)
+  
   
   # Schedules ENRICHED:
   enriched_raw_from_df <- fetch_data_from_db("SELECT * FROM premier_league_fixtures_historical_enriched")
@@ -773,18 +774,16 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
   l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
   
   
-  
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # CODE FOR UPDATING USER BETS IN r6
   
   query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
-  all_bets <- dbGetQuery(con, query, 
-                         list(r6$user_info$user_id
-                         )
+  all_bets_user <- dbGetQuery(con, query, 
+                              list(user_id
+                              )
   ) 
   
-  
-  all_bets <- all_bets %>% 
+  all_bets_user <- all_bets_user %>% 
     mutate(
       placed_local = with_tz(placed, tzone = Sys.timezone()),
       placed = format(placed_local, "%Y-%m-%d %H:%M")
@@ -795,6 +794,26 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Update odds
+  
+  total_payout_df = rbind(
+    all_bets %>% filter(match_id==match_id_input),
+    tibble(
+      "bet" = c(home_team_input, "DRAW", away_team_input),
+      "match_id" = c(match_id_input, match_id_input, match_id_input),
+      "odds" = c(0,0,0)
+    )
+  ) %>% 
+  
+  group_by(bet) %>% summarise(payout = sum(odds)) %>% ungroup() %>% t() %>% as_tibble()
+  
+  
+  df_total_payout_clean <- data.frame(total_payout_df[2,]) %>% setNames(total_payout_df[1,]) %>% as_tibble %>%  # select data
+    mutate_all(as.numeric) %>% 
+    select(home_team_input, "DRAW", away_team_input) %>% # reorder to home- DRAW - away %>% 
+    set_names(c("payout_if_home_win", "payout_if_draw_win", "payout_if_away_win")) %>%  # rename to cols to use 
+    mutate(match_id = match_id_input)    
+  
+  
   
   if(sum(l_bets)>0){
     
@@ -808,38 +827,42 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
             latest_odds_draw = 100/`Draw Probability (%)`,
             latest_odds_away = 100/`Away Win Probability (%)`
           ) %>% 
-          select(match_id, latest_odds_home, latest_odds_draw, latest_odds_away)
+          select(match_id, latest_odds_home, latest_odds_draw, latest_odds_away),
+        by = c("match_id")
       ) %>% 
+      left_join(
+        df_total_payout_clean,
+        by = c("match_id")
+      ) %>% 
+    mutate(
+      total_n_odds_match = sum(l_bets),
+      # n_odds_home = match_bets_home,
+      # n_odds_draw = match_bets_draw,
+      # n_odds_away = match_bets_away,
       
-      mutate(
-        total_n_odds_match = sum(l_bets),
-        n_odds_home = match_bets_home,
-        n_odds_draw = match_bets_draw,
-        n_odds_away = match_bets_away,
-        
-        perc_to_distribute = 2*log(total_n_odds_match) + total_n_odds_match/100,
-        
-        initial_odds_home = 100/`Home Win Probability (%)`,
-        initial_odds_draw = 100/`Draw Probability (%)`,
-        initial_odds_away = 100/`Away Win Probability (%)`,
-        
-        payout_if_home_win = n_odds_home * latest_odds_home,
-        payout_if_draw_win = n_odds_draw * latest_odds_draw,
-        payout_if_away_win = n_odds_away * latest_odds_away,
-        payout_total = payout_if_home_win + payout_if_draw_win + payout_if_away_win,
-        
-        payout_perc_if_home_win = 100 * payout_if_home_win / payout_total,
-        payout_perc_if_draw_win = 100 * payout_if_draw_win / payout_total,
-        payout_perc_if_away_win = 100 * payout_if_away_win / payout_total,
-        
-        perc_correction_odds_home = (33 - payout_perc_if_home_win) * perc_to_distribute/100,
-        perc_correction_odds_draw = (33 - payout_perc_if_draw_win) * perc_to_distribute/100,
-        perc_correction_odds_away = (33 - payout_perc_if_away_win) * perc_to_distribute/100,
-        
-        new_odds_home = 100/(`Home Win Probability (%)` - perc_correction_odds_home),
-        new_odds_draw = 100/(`Draw Probability (%)` - perc_correction_odds_draw),
-        new_odds_away = 100/(`Away Win Probability (%)` - perc_correction_odds_away),
-      )
+      perc_to_distribute = 2*log(total_n_odds_match) + total_n_odds_match/100,
+      
+      initial_odds_home = 100/`Home Win Probability (%)`,
+      initial_odds_draw = 100/`Draw Probability (%)`,
+      initial_odds_away = 100/`Away Win Probability (%)`,
+      
+      # payout_if_home_win = n_odds_home * latest_odds_home,
+      # payout_if_draw_win = n_odds_draw * latest_odds_draw,
+      # payout_if_away_win = n_odds_away * latest_odds_away,
+      payout_total = payout_if_home_win + payout_if_draw_win + payout_if_away_win,
+      
+      payout_perc_if_home_win = 100 * payout_if_home_win / payout_total,
+      payout_perc_if_draw_win = 100 * payout_if_draw_win / payout_total,
+      payout_perc_if_away_win = 100 * payout_if_away_win / payout_total,
+      
+      perc_correction_odds_home = (33 - payout_perc_if_home_win) * perc_to_distribute/100,
+      perc_correction_odds_draw = (33 - payout_perc_if_draw_win) * perc_to_distribute/100,
+      perc_correction_odds_away = (33 - payout_perc_if_away_win) * perc_to_distribute/100,
+      
+      new_odds_home = 100/(`Home Win Probability (%)` - perc_correction_odds_home),
+      new_odds_draw = 100/(`Draw Probability (%)` - perc_correction_odds_draw),
+      new_odds_away = 100/(`Away Win Probability (%)` - perc_correction_odds_away),
+    )
     
     df_to_upload <- df_with_new_odds %>% 
       mutate(
@@ -889,7 +912,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
   lout <- list(
     l_bets,
     r6_update_odds_pl,
-    all_bets
+    all_bets_user
   )
   
   return(lout)
@@ -2068,8 +2091,5 @@ f_all_bets_table <- function(r6){
   return(r)
   
 }
-
-
-
 
 

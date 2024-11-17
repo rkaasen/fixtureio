@@ -4,9 +4,9 @@ card_for_match_details_UI <- function(id) {
   
   fluidRow(
     
-    hidden(
-      div(class = "full-page-spinner", tags$img(src = "spinner.gif"))
-    ),
+    # hidden(
+    #   div(class = "full-page-spinner", tags$img(src = "spinner.gif"))
+    # ),
     
     # 
     # actionButton(inputId = NS(id, "external_toggle"), label = "Match Stats", class = "reactable-button"),
@@ -106,7 +106,13 @@ card_for_match_details_UI <- function(id) {
                                      column(4, align = "center", id = NS(id, "pie_chart_show"),
                                             class = "rounded-column",
                                             style = "background: linear-gradient(to bottom, #f7f7f7, #ececed); margin-left: 30px;",
-                                            plotlyOutput(NS(id,"pie_chart"))
+                                            fluidRow(plotlyOutput(NS(id,"pie_chart"))),
+                                            fluidRow(
+                                              column(12, h4("Bets changed since opening: ")),
+                                              column(4, h6(textOutput(NS(id,"home_team_odds_change")))),
+                                              column(4, h6(textOutput(NS(id,"draw_team_odds_change")))),
+                                              column(4, h6(textOutput(NS(id,"away_team_odds_change"))))
+                                            )
                                      ),
                                      
                                      column(7, align = "Left", id = NS(id, "user_info"),
@@ -280,7 +286,7 @@ card_for_match_details_Server <- function(id, r6) {
       shinyjs::show("chose_bet_row")
       
       # check if betting is open
-
+      
       # match_id_chosen = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending)
       
       bet_open <- f_match_open_for_betting() %>% 
@@ -303,7 +309,7 @@ card_for_match_details_Server <- function(id, r6) {
           
           shinyjs::show("betting_closed")
         }
-
+        
       } else {
         shinyjs::show("no_user_info")
         
@@ -348,10 +354,23 @@ card_for_match_details_Server <- function(id, r6) {
       shinyjs::show("your_odds_row")
       
       # IS BET OPEN?
-
+      
       bet_open <- f_match_open_for_betting() %>% 
         filter(match_id == match_id_chosen()) %>% 
         pull(bet_open)
+      
+      if(bet_open ){
+        
+        if(r6$user_info$logged_in){
+          l_bets <- fetch_total_bets_on_match(match_id_chosen())
+        }
+        
+        trigger("set_odds_and_update_pie")
+      }
+      
+    })
+    
+    observeEvent(watch("set_odds_and_update_pie"), ignoreInit = T, {
       
       odds_row <- r6$odds$pl %>% 
         filter(
@@ -359,50 +378,59 @@ card_for_match_details_Server <- function(id, r6) {
           AwayTeam == r6$selected_away_team
         )
       
-      if(bet_open){
-
-        home_perc_bet <- odds_row %>% pull(`Home Win Probability (%)`)
-        away_perc_bet <- odds_row %>% pull(`Away Win Probability (%)`)
-        draw_perc_bet <- odds_row %>% pull(`Draw Probability (%)`)
-        
-        # Needs to be calculated better:
-        home_odds((100/home_perc_bet))
-        away_odds((100/away_perc_bet))
-        draw_odds((100/draw_perc_bet))
-        
-        output$home_odds <- renderText(round(as.numeric(home_odds()),2))
-        output$away_odds <- renderText(round(as.numeric(away_odds()),2))
-        output$draw_odds <- renderText(round(as.numeric(draw_odds()),2))
-        
-        if(home_odds()-fair_home_odds() > 0.2){
-          shinyjs::addClass(id = "btn_home_odds", class = "odds-button-better")
-        } else if(home_odds()-fair_home_odds() < 0.2){
-          shinyjs::addClass(id = "btn_home_odds", class = "odds-button-worse")
-        } else{
-          shinyjs::addClass(id = "btn_home_odds", class = "odds-button-same")
-        }
-        
-        if(draw_odds()-fair_draw_odds() > 0.2){
-          shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-better")
-        } else if(draw_odds()-fair_draw_odds() < 0.2){
-          shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-worse")
-        } else{
-          shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-same")
-        }
-        
-        if(away_odds()-fair_away_odds() > 0.2){
-          shinyjs::addClass(id = "btn_away_odds", class = "odds-button-better")
-        } else if(away_odds()-fair_away_odds() < 0.2){
-          shinyjs::addClass(id = "btn_away_odds", class = "odds-button-worse")
-        } else{
-          shinyjs::addClass(id = "btn_away_odds", class = "odds-button-same")
-        }
-        
+      home_perc_bet <- odds_row %>% pull(`Home Win Probability (%)`)
+      away_perc_bet <- odds_row %>% pull(`Away Win Probability (%)`)
+      draw_perc_bet <- odds_row %>% pull(`Draw Probability (%)`)
+      
+      # Needs to be calculated better:
+      home_odds((100/home_perc_bet))
+      away_odds((100/away_perc_bet))
+      draw_odds((100/draw_perc_bet))
+      
+      output$home_odds <- renderText(round(as.numeric(home_odds()),2))
+      output$away_odds <- renderText(round(as.numeric(away_odds()),2))
+      output$draw_odds <- renderText(round(as.numeric(draw_odds()),2))
+      
+      if(home_odds()-fair_home_odds() > 0.2){
+        shinyjs::addClass(id = "btn_home_odds", class = "odds-button-better")
+      } else if(home_odds()-fair_home_odds() < 0.2){
+        shinyjs::addClass(id = "btn_home_odds", class = "odds-button-worse")
+      } else{
+        shinyjs::addClass(id = "btn_home_odds", class = "odds-button-same")
       }
       
+      if(draw_odds()-fair_draw_odds() > 0.2){
+        shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-better")
+      } else if(draw_odds()-fair_draw_odds() < 0.2){
+        shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-worse")
+      } else{
+        shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-same")
+      }
       
+      if(away_odds()-fair_away_odds() > 0.2){
+        shinyjs::addClass(id = "btn_away_odds", class = "odds-button-better")
+      } else if(away_odds()-fair_away_odds() < 0.2){
+        shinyjs::addClass(id = "btn_away_odds", class = "odds-button-worse")
+      } else{
+        shinyjs::addClass(id = "btn_away_odds", class = "odds-button-same")
+      }
+      
+      if(r6$user_info$logged_in){
+        output$pie_chart <- renderPlotly({
+          f_pie_n_bets(
+            list_n_bets = l_bets, 
+            list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
+          )
+        })
+        
+        output$home_team_odds_change <- renderText(paste0(r6$selected_home_team_short, ": \n", round(odds_row %>% pull(changed_since_start_home),3)))
+        output$draw_team_odds_change <- renderText(paste0("DRAW", ": \n", round(odds_row %>% pull(changed_since_start_draw),3)))
+        output$away_team_odds_change <- renderText(paste0(r6$selected_away_team_short, ": \n", round(odds_row %>% pull(changed_since_start_away),3)))
+      }
       
     })
+    
+    
     
     observeEvent(input$btn_cancel_bet, {
       shinyjs::hide("place_bet_row")
@@ -483,9 +511,7 @@ card_for_match_details_Server <- function(id, r6) {
                                                       match_id_chosen())
         r6$odds$pl <- l_after_update[[2]]
         r6$user_info$bets <-l_after_update[[3]]
-        # update_n_bets_in_db(r6$user_info$user_id, r6$user_info$bets, r6$user_info$bets_week_starting, match_id_chosen())
-        
-        
+       
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
         })
@@ -493,13 +519,7 @@ card_for_match_details_Server <- function(id, r6) {
         # update pie
         # l_bets <- fetch_total_bets_on_match(match_id_chosen())
         l_bets <- l_after_update[[1]]
-
-        output$pie_chart <- renderPlotly({
-          f_pie_n_bets(
-            list_n_bets = l_bets, 
-            list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
-          )
-        })
+        trigger("set_odds_and_update_pie")
         
         shinyjs::hide(selector = ".full-page-spinner") 
         
@@ -516,7 +536,7 @@ card_for_match_details_Server <- function(id, r6) {
       bet_open <- f_match_open_for_betting() %>% 
         filter(match_id == match_id_chosen()) %>% 
         pull(game_15_started)
-
+      
       
       if (bet_open){
         showNotification("Game already started, or too close to kickoff", type = "error", duration = 5)
@@ -540,17 +560,17 @@ card_for_match_details_Server <- function(id, r6) {
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
         })
-
+        
         # update pie
         # l_bets <- fetch_total_bets_on_match(match_id_chosen)
         l_bets <- l_after_update[[1]]
-        
-        output$pie_chart <- renderPlotly({
-          f_pie_n_bets(
-            list_n_bets = l_bets, 
-            list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
-          )
-        })
+        trigger("set_odds_and_update_pie")
+        # output$pie_chart <- renderPlotly({
+        #   f_pie_n_bets(
+        #     list_n_bets = l_bets, 
+        #     list_labels = c(r6$selected_home_team_short, "Draw", r6$selected_away_team_short)
+        #   )
+        # })
         
         shinyjs::hide(selector = ".full-page-spinner") 
         

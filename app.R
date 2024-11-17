@@ -271,6 +271,7 @@ server <- function(input, output, session) {
   init("open_analytics_card_home", "open_analytics_card", "open_analytics_card_away")
   init("user_logged_in", "user_logged_out")
   init("divergent_click", "compare_btn_click")
+  init("set_odds_and_update_pie")
 
   # Read modules
   button_to_estimation_Server("button_on_selection_tab")

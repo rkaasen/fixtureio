@@ -77,7 +77,7 @@ login_Server <- function(id, r6) {
       })
       showNotification(message_text, type = "error", duration = 3)
       
-      shinyjs::delay(3000, { login_message("") })  # Clear after 5 seconds
+      shinyjs::delay(3000, { login_message("") })  
       output$login_message <- renderText({
         login_message()
       })
@@ -92,7 +92,7 @@ login_Server <- function(id, r6) {
       })
       showNotification(message_text, type = "error", duration = 3)
       
-      shinyjs::delay(3000, { signup_message("") })  # Clear after 5 seconds
+      shinyjs::delay(3000, { signup_message("") }) 
       output$signup_message <- renderText({
         signup_message()
       })
