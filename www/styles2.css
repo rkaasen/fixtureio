@@ -695,3 +695,26 @@ border-radius: 0px;
   }
 }
 
+
+/* Notification bar */
+.notification-bar {
+  position: relative; /* Default relative positioning */
+  width: 100%;
+  background-color: #ffcc00; /* Yellow background */
+  color: #000; /* Black text */
+  text-align: center;
+  padding: 10px;
+  font-weight: bold;
+  z-index: 1; /* Ensure it stays on top of the content but below the navbar */
+  border-bottom: 2px solid #ccc; /* Optional border for separation */
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Optional shadow for aesthetics */
+}
+
+/* Link styling */
+.notification-link {
+  color: #0056b3; /* Blue link color */
+  text-decoration: underline;
+}
+.notification-link:hover {
+  color: #003d99; /* Darker blue on hover */
+}

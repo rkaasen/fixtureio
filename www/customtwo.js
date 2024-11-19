@@ -8,6 +8,23 @@ $(document).ready(function() {
 
 
 
+ $(document).ready(function() {
+      // Feedback link click event
+      $(document).on('click', '.feedback-link', function(event) {
+        event.preventDefault(); // Prevent the default link action
+        console.log('Feedback link clicked'); // Debugging in browser console
+        Shiny.setInputValue('feedback_clicked', 'feedback' + '--' + Math.random()); // Trigger Shiny event
+      });
+
+      // Betting link click event
+      $(document).on('click', '.betting-link', function(event) {
+        event.preventDefault(); // Prevent the default link action
+        console.log('Betting link clicked'); // Debugging in browser console
+        Shiny.setInputValue('betting_clicked', 'betting' + '--' + Math.random()); // Trigger Shiny event
+      });
+    });
+
+
 // is the full screen being closed?
 
 $(document).on('shiny:connected', function() {

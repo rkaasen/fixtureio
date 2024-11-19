@@ -55,18 +55,6 @@ popup_Server <- function(id, r6) {
       
     })
     
-
-    
-    observeEvent(input$stat_table_data, {
-      
-      # input$stat_select_table$Select %>% print()
-      
-      input %>%  print()
-      input$stat_select_table$Importance %>%  print()
-
-    })
-    
-
     
     
  

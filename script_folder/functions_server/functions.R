@@ -1,5 +1,86 @@
 
 
+notification_bar_UI <- function() {
+  div(
+    class = "notification-bar",
+    "App is in testing. Please leave feedback ",
+    tags$a(
+      href = "#",  # Prevent navigation
+      class = "feedback-link notification-link",  # Use a specific class for feedback
+      "here. "
+    ),
+    "This is a limited version of the app.",
+    tags$a(
+      href = "#",  # Prevent navigation
+      class = "betting-link notification-link",  # Use a specific class for betting
+      "Betting Features "
+    ),
+    "launching soon."
+  )
+}
+
+
+write_feedback_to_db <- function(name, email, feedback) {
+  # Establish the database connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  print("after_con")
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # SQL query for parameterized insertion
+  sql <- "
+    INSERT INTO feedback (name, email, feedback, created_at)
+    VALUES ($1, $2, $3, NOW())
+  "
+  
+  # Execute the query with parameters
+  tryCatch({
+    dbExecute(con, sql, params = list(name, email, feedback))
+    print("Feedback added successfully!")
+  }, error = function(e) {
+    print(paste("Error adding feedback:", e$message))
+  })
+}
+
+write_signup_to_db <- function(name, email) {
+  # Establish a database connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure the connection is closed at the end of the function
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  # SQL query for parameterized insertion
+  sql <- "
+    INSERT INTO early_access_signups (name, email)
+    VALUES ($1, $2)
+  "
+  
+  # Execute the query with parameters
+  tryCatch({
+    dbExecute(con, sql, params = list(name, email))
+    message("Signup added successfully!")
+  }, error = function(e) {
+    message(paste("Error adding signup:", e$message))
+  })
+}
+
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # INTERNAL FUNCTIONS ----
 
@@ -569,7 +650,6 @@ fetch_table_all_bets <- function(r6) {
                          )
   )
   
-  
   all_bets <- all_bets %>%
     mutate(
       placed_local = with_tz(placed, tzone = Sys.timezone()),
@@ -600,8 +680,6 @@ fetch_total_bets_on_match <- function(match_id_input) {
   query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
   all_bets <- dbGetQuery(con, query)
 
-
-
   match_bets <- all_bets %>% filter(match_id == match_id_input)
 
   split_text <- strsplit(match_id_input, "-")[[1]]
@@ -614,6 +692,7 @@ fetch_total_bets_on_match <- function(match_id_input) {
   match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
 
   l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
+  
   return(l_bets)
 }
 
@@ -721,6 +800,11 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
   query <- "SELECT bet, match_id, odds FROM bets WHERE cancelled = FALSE"
   all_bets <- dbGetQuery(con, query)
   
+  # if(F){
+  # query <- "SELECT * FROM bets WHERE cancelled = FALSE"
+  # all_bets <- dbGetQuery(con, query)
+  # }
+  
   
   # Schedules ENRICHED:
   enriched_raw_from_df <- fetch_data_from_db("SELECT * FROM premier_league_fixtures_historical_enriched")
@@ -739,15 +823,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     filter(TimeStamp_Uploaded == min(TimeStamp_Uploaded)) %>% 
     ungroup() %>% 
     f_prepare_schedule_data(enriched = T)
-  
-  raw_pl_schedules_enriched_last_upload <- 
-    raw_pl_schedules_enriched %>% 
-    filter(match_id == match_id_input) %>% 
-    group_by(match_id) %>%
-    filter(TimeStamp_Uploaded == max(TimeStamp_Uploaded)) %>% 
-    ungroup() %>% 
-    f_prepare_schedule_data(enriched = T)
-  
+
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # CODE FOR PIE:
@@ -800,10 +876,9 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     tibble(
       "bet" = c(home_team_input, "DRAW", away_team_input),
       "match_id" = c(match_id_input, match_id_input, match_id_input),
-      "odds" = c(0,0,0)
+      "odds" = c(20,20,20)
     )
   ) %>% 
-  
   group_by(bet) %>% summarise(payout = sum(odds)) %>% ungroup() %>% t() %>% as_tibble()
   
   
@@ -821,34 +896,14 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
       raw_pl_schedules_enriched_first_upload %>% 
       filter(match_id == match_id_input) %>% 
       left_join(
-        raw_pl_schedules_enriched_last_upload %>% 
-          mutate(
-            latest_odds_home = 100/`Home Win Probability (%)`,
-            latest_odds_draw = 100/`Draw Probability (%)`,
-            latest_odds_away = 100/`Away Win Probability (%)`
-          ) %>% 
-          select(match_id, latest_odds_home, latest_odds_draw, latest_odds_away),
-        by = c("match_id")
-      ) %>% 
-      left_join(
         df_total_payout_clean,
         by = c("match_id")
       ) %>% 
     mutate(
       total_n_odds_match = sum(l_bets),
-      # n_odds_home = match_bets_home,
-      # n_odds_draw = match_bets_draw,
-      # n_odds_away = match_bets_away,
       
       perc_to_distribute = 2*log(total_n_odds_match) + total_n_odds_match/100,
       
-      initial_odds_home = 100/`Home Win Probability (%)`,
-      initial_odds_draw = 100/`Draw Probability (%)`,
-      initial_odds_away = 100/`Away Win Probability (%)`,
-      
-      # payout_if_home_win = n_odds_home * latest_odds_home,
-      # payout_if_draw_win = n_odds_draw * latest_odds_draw,
-      # payout_if_away_win = n_odds_away * latest_odds_away,
       payout_total = payout_if_home_win + payout_if_draw_win + payout_if_away_win,
       
       payout_perc_if_home_win = 100 * payout_if_home_win / payout_total,
@@ -1784,7 +1839,7 @@ f_last_10_table <- function(df, team) {
 
 
 
-f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home", "Draw", "Away")) {
+f_pie_n_bets <- function(list_n_bets, list_labels = c("Home", "Draw", "Away")) {
   
   
   if(sum(list_n_bets)==0){
@@ -1835,8 +1890,10 @@ f_pie_n_bets <- function(list_n_bets = c(440, 2000, 700), list_labels = c("Home"
   
   if(values[1] > values[3]){
     color_vec = c("#14499F", "#8A8A8A", "#98AFD3")
-  } else{
+  } else if (values[3] > values[1]){
     color_vec = c("#98AFD3", "#8A8A8A", "#14499F")
+  } else {
+    color_vec = c("#98AFD3", "#8A8A8A", "#98AFD3")
   }
   
   # Create the plot
@@ -1896,7 +1953,6 @@ f_your_bets_table <- function(r6){
   df_use <- format_bets_for_match_bets(r6$user_info$bets, 
                                        paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending))
   
-  df_use %>% print()
   r <- reactable(df_use, 
                  columns = list(
                    bet = colDef(name = "BET", minWidth = 250, align = "left", style = list(fontSize = "16px"), vAlign = "center"),
