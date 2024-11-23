@@ -126,7 +126,7 @@ ui <- function(request) {
           useShinyjs(),
           tags$head(
             tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
-            tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
+            # tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
           ),
           
           tabsetPanel(
@@ -186,7 +186,7 @@ ui <- function(request) {
           useShinyjs(),
           tags$head(
             tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
-            tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
+            # tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
           ),
           
           tabsetPanel(
@@ -383,89 +383,89 @@ server <- function(input, output, session) {
     nav_select("navbar", "ABOUT/AUTHORS")
   })
   
-  # Handle betting link clicks
-  observeEvent(input$betting_clicked, ignoreInit = TRUE, {
-    showModal(
-      tagList(
-        tags$style(HTML("
-        .modal-dialog {
-          width: 50vw !important;
-          max-width: 80vw !important;
-        }
-      ")),
-      modalDialog(
-        title = "Exciting New Betting Feature!",
-        div(
-          tags$p("Get ready for our exciting new betting feature:", style = "font-weight: 450;"),
-          tags$ul(
-            tags$li(
-              tags$span(
-                "Weekly Free Bets: ", 
-                style = "font-weight: 750;"
-              ),
-              tags$span(
-                "Receive free virtual bets every Monday to wager on upcoming matches.", 
-                style = "font-weight: 500;"
-              )
-            ),
-            tags$li(
-              tags$span(
-                "Community-Driven Odds: ", 
-                style = "font-weight: 750;"
-              ),
-              tags$span(
-                "Watch odds update continuously based on the community's bets—you're not just predicting outcomes, you're competing with fellow fans!", 
-                style = "font-weight: 500;"
-              )
-            ),
-            tags$li(
-              tags$span(
-                "Join the Competition: ", 
-                style = "font-weight: 750;"
-              ),
-              tags$span(
-                "Sharpen your prediction skills, strategize your bets, and see how you stack up against others.", 
-                style = "font-weight: 500;"
-              )
-            )
-          ),
-          tags$p("Stay tuned—this is just the beginning of a more immersive and interactive football experience!", style = "font-weight: 6000;")
-        ),
-        br(),
-        hr(),
-        h5("If you want early access to the betting feature:"),
-        textInput("signup_name", "Name", placeholder = "Enter your name"),
-        textInput("signup_email", "Email", placeholder = "Enter your email"),
-        actionButton("submit_signup", "Submit", class = "btn-success"),
-        
-        easyClose = TRUE,
-        footer = modalButton("Close")
-      )
-    )
-    )
-  })
-  
-  
-  # Handle signup submission
-  observeEvent(input$submit_signup, {
-    name <- input$signup_name
-    email <- input$signup_email
-    
-    # Validate inputs
-    if (is.null(name) || name == "" || is.null(email) || email == "") {
-      showNotification("Please provide both name and email.", type = "error")
-      return()
-    }
-    
-    # Write signup to the database
-    tryCatch({
-      write_signup_to_db(name, email)
-      showNotification("Thank you for signing up!", type = "message")
-      removeModal() # Close the modal upon successful submission
-    }, error = function(e) {
-      showNotification("An error occurred: Could not save your signup.", type = "error")
-    })
-  })
+  # # Handle betting link clicks
+  # observeEvent(input$betting_clicked, ignoreInit = TRUE, {
+  #   showModal(
+  #     tagList(
+  #       tags$style(HTML("
+  #       .modal-dialog {
+  #         width: 50vw !important;
+  #         max-width: 80vw !important;
+  #       }
+  #     ")),
+  #     modalDialog(
+  #       title = "Exciting New Betting Feature!",
+  #       div(
+  #         tags$p("Get ready for our exciting new betting feature:", style = "font-weight: 450;"),
+  #         tags$ul(
+  #           tags$li(
+  #             tags$span(
+  #               "Weekly Free Bets: ", 
+  #               style = "font-weight: 750;"
+  #             ),
+  #             tags$span(
+  #               "Receive free virtual bets every Monday to wager on upcoming matches.", 
+  #               style = "font-weight: 500;"
+  #             )
+  #           ),
+  #           tags$li(
+  #             tags$span(
+  #               "Community-Driven Odds: ", 
+  #               style = "font-weight: 750;"
+  #             ),
+  #             tags$span(
+  #               "Watch odds update continuously based on the community's bets—you're not just predicting outcomes, you're competing with fellow fans!", 
+  #               style = "font-weight: 500;"
+  #             )
+  #           ),
+  #           tags$li(
+  #             tags$span(
+  #               "Join the Competition: ", 
+  #               style = "font-weight: 750;"
+  #             ),
+  #             tags$span(
+  #               "Sharpen your prediction skills, strategize your bets, and see how you stack up against others.", 
+  #               style = "font-weight: 500;"
+  #             )
+  #           )
+  #         ),
+  #         tags$p("Stay tuned—this is just the beginning of a more immersive and interactive football experience!", style = "font-weight: 6000;")
+  #       ),
+  #       br(),
+  #       hr(),
+  #       h5("If you want early access to the betting feature:"),
+  #       textInput("signup_name", "Name", placeholder = "Enter your name"),
+  #       textInput("signup_email", "Email", placeholder = "Enter your email"),
+  #       actionButton("submit_signup", "Submit", class = "btn-success"),
+  #       
+  #       easyClose = TRUE,
+  #       footer = modalButton("Close")
+  #     )
+  #   )
+  #   )
+  # })
+  # 
+  # 
+  # # Handle signup submission
+  # observeEvent(input$submit_signup, {
+  #   name <- input$signup_name
+  #   email <- input$signup_email
+  #   
+  #   # Validate inputs
+  #   if (is.null(name) || name == "" || is.null(email) || email == "") {
+  #     showNotification("Please provide both name and email.", type = "error")
+  #     return()
+  #   }
+  #   
+  #   # Write signup to the database
+  #   tryCatch({
+  #     write_signup_to_db(name, email)
+  #     showNotification("Thank you for signing up!", type = "message")
+  #     removeModal() # Close the modal upon successful submission
+  #   }, error = function(e) {
+  #     showNotification("An error occurred: Could not save your signup.", type = "error")
+  #   })
+  # })
   
   
   

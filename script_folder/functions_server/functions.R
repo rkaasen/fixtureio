@@ -9,13 +9,13 @@ notification_bar_UI <- function() {
       class = "feedback-link notification-link",  # Use a specific class for feedback
       "here. "
     ),
-    "This is a limited version of the app.",
-    tags$a(
-      href = "#",  # Prevent navigation
-      class = "betting-link notification-link",  # Use a specific class for betting
-      "Betting Features "
-    ),
-    "launching soon."
+    # "This is a limited version of the app.",
+    # tags$a(
+    #   href = "#",  # Prevent navigation
+    #   class = "betting-link notification-link",  # Use a specific class for betting
+    #   "Betting Features "
+    # ),
+    # "launching soon."
   )
 }
 
@@ -666,7 +666,7 @@ fetch_table_all_bets <- function(user_id) {
 }
 
 fetch_total_bets_on_match <- function(match_id_input) {
-
+  
   # Establish the connection
   con <- dbConnect(
     RPostgres::Postgres(),
@@ -676,24 +676,24 @@ fetch_total_bets_on_match <- function(match_id_input) {
     password = Sys.getenv("DB_PASSWORD"),
     port = Sys.getenv("DB_PORT", "5432")
   )
-
+  
   # Ensure connection closes at the end of the function, even if an error occurs
   on.exit(dbDisconnect(con), add = TRUE)
-
+  
   query <- "SELECT bet, match_id FROM bets WHERE cancelled = FALSE"
   all_bets <- dbGetQuery(con, query)
-
+  
   match_bets <- all_bets %>% filter(match_id == match_id_input)
-
+  
   split_text <- strsplit(match_id_input, "-")[[1]]
   home_team_input <- split_text[1]
   away_team_input <- split_text[2]
-
-
+  
+  
   match_bets_home <- match_bets %>% filter(bet == home_team_input) %>% nrow()
   match_bets_away <- match_bets %>% filter(bet == away_team_input) %>% nrow()
   match_bets_draw <- match_bets %>% filter(bet == "DRAW") %>% nrow()
-
+  
   l_bets <- c(match_bets_home, match_bets_draw, match_bets_away)
   
   return(l_bets)
@@ -826,7 +826,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     filter(TimeStamp_Uploaded == min(TimeStamp_Uploaded)) %>% 
     ungroup() %>% 
     f_prepare_schedule_data(enriched = T)
-
+  
   
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # CODE FOR PIE:
@@ -882,7 +882,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
       "odds" = c(20,20,20)
     )
   ) %>% 
-  group_by(bet) %>% summarise(payout = sum(odds)) %>% ungroup() %>% t() %>% as_tibble()
+    group_by(bet) %>% summarise(payout = sum(odds)) %>% ungroup() %>% t() %>% as_tibble()
   
   
   df_total_payout_clean <- data.frame(total_payout_df[2,]) %>% setNames(total_payout_df[1,]) %>% as_tibble %>%  # select data
@@ -902,25 +902,25 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
         df_total_payout_clean,
         by = c("match_id")
       ) %>% 
-    mutate(
-      total_n_odds_match = sum(l_bets),
-      
-      perc_to_distribute = 2*log(total_n_odds_match) + total_n_odds_match/100,
-      
-      payout_total = payout_if_home_win + payout_if_draw_win + payout_if_away_win,
-      
-      payout_perc_if_home_win = 100 * payout_if_home_win / payout_total,
-      payout_perc_if_draw_win = 100 * payout_if_draw_win / payout_total,
-      payout_perc_if_away_win = 100 * payout_if_away_win / payout_total,
-      
-      perc_correction_odds_home = (33 - payout_perc_if_home_win) * perc_to_distribute/100,
-      perc_correction_odds_draw = (33 - payout_perc_if_draw_win) * perc_to_distribute/100,
-      perc_correction_odds_away = (33 - payout_perc_if_away_win) * perc_to_distribute/100,
-      
-      new_odds_home = 100/(`Home Win Probability (%)` - perc_correction_odds_home),
-      new_odds_draw = 100/(`Draw Probability (%)` - perc_correction_odds_draw),
-      new_odds_away = 100/(`Away Win Probability (%)` - perc_correction_odds_away),
-    )
+      mutate(
+        total_n_odds_match = sum(l_bets),
+        
+        perc_to_distribute = 2*log(total_n_odds_match) + total_n_odds_match/100,
+        
+        payout_total = payout_if_home_win + payout_if_draw_win + payout_if_away_win,
+        
+        payout_perc_if_home_win = 100 * payout_if_home_win / payout_total,
+        payout_perc_if_draw_win = 100 * payout_if_draw_win / payout_total,
+        payout_perc_if_away_win = 100 * payout_if_away_win / payout_total,
+        
+        perc_correction_odds_home = (33 - payout_perc_if_home_win) * perc_to_distribute/100,
+        perc_correction_odds_draw = (33 - payout_perc_if_draw_win) * perc_to_distribute/100,
+        perc_correction_odds_away = (33 - payout_perc_if_away_win) * perc_to_distribute/100,
+        
+        new_odds_home = 100/(`Home Win Probability (%)` - perc_correction_odds_home),
+        new_odds_draw = 100/(`Draw Probability (%)` - perc_correction_odds_draw),
+        new_odds_away = 100/(`Away Win Probability (%)` - perc_correction_odds_away),
+      )
     
     df_to_upload <- df_with_new_odds %>% 
       mutate(
@@ -938,7 +938,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
       select(enriched_raw_from_df %>% names())
     
     r6_update_odds_pl <- df_to_upload
-
+    
     
     # r6_update_odds_pl <- raw_pl_schedules_enriched %>%
     # 
@@ -947,7 +947,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     #   select(enriched_raw_from_df %>% names()) %>%
     #   mutate(Date = format(dmy_hm(Date)) %>% as_datetime(),
     #          TimeStamp_Uploaded = as_datetime(Sys.time(), tz = "UTC"))
-
+    
     # 
     
     dbWriteTable(
@@ -2074,12 +2074,14 @@ f_format_all_bets <- function(r6){
   return(df_use)
 }
 
-f_all_bets_table <- function(r6){
+f_all_bets_table <- function(df_bets, date_range){
+  
   
   df_bet_status <- f_match_open_for_betting() %>% 
     select(match_id, game_15_started)
   
-  df_use <- f_format_all_bets(r6) %>% 
+  df_use <- df_bets %>% 
+    
     mutate(
       vs_col = "VS",
       Season_ending = f_calc_season_ending(utc_date)
@@ -2101,6 +2103,11 @@ f_all_bets_table <- function(r6){
         T ~ "#4CAF50"
       ),
     ) %>% 
+    filter(
+      Date >= as.Date(date_range[1]),
+      Date <= as.Date(date_range[2])
+    ) %>% 
+    
     select(Status, HomeTeam, vs_col, AwayTeam, bet, odds, bet_concluded, Date, Time, col_def)
   
   
@@ -2118,53 +2125,53 @@ f_all_bets_table <- function(r6){
                    
                    
                    
-                   Date = colDef(minWidth = 105, align = "center", 
-                                 style = list(fontSize = "14px", color = "#14499F"), vAlign = "center"),
+                   Date = colDef(minWidth = 100, align = "center", 
+                                 style = list(fontSize = "13px", color = "#14499F"), vAlign = "center"),
                    
-                   Time = colDef(minWidth = 80, align = "center", 
-                                 style = list(fontSize = "14px", color = "#14499F"), vAlign = "center"), 
+                   Time = colDef(minWidth = 75, align = "center", 
+                                 style = list(fontSize = "13px", color = "#14499F"), vAlign = "center"), 
                    
-                   HomeTeam = colDef(name = "Home Team", minWidth = 170, align = "right", vAlign = "center",
+                   HomeTeam = colDef(name = "Home Team", minWidth = 150, align = "right", vAlign = "center",
                                      style = function(value, index) {
                                        # Set text to black and larger font if it matches the 'bet' column, else default
                                        if (value == df_use$bet[index]) {
-                                         list(color = "black", fontSize = "18px")
+                                         list(color = "black", fontSize = "16px")
                                        } else {
-                                         list(color = "#14499F", fontSize = "14px")
+                                         list(color = "#14499F", fontSize = "13px")
                                        }
                                      }),
                    
-                   vs_col = colDef(name = "", minWidth = 60, align = "center", vAlign = "center",
+                   vs_col = colDef(name = "", minWidth = 50, align = "center", vAlign = "center",
                                    style = function(value, index) {
                                      # Set text to black and larger font if it matches the 'bet' column, else default
                                      if ("DRAW" == df_use$bet[index]) {
-                                       list(color = "black", fontSize = "18px")
+                                       list(color = "black", fontSize = "16px")
                                      } else {
-                                       list(color = "#14499F", fontSize = "14px")
+                                       list(color = "#14499F", fontSize = "13px")
                                      }
                                    }),
                    
-                   AwayTeam = colDef(name = "Away Team", minWidth = 170, vAlign = "center",
+                   AwayTeam = colDef(name = "Away Team", minWidth = 150, vAlign = "center",
                                      style = function(value, index) {
                                        # Set text to black and larger font if it matches the 'bet' column, else default
                                        if (value == df_use$bet[index]) {
-                                         list(color = "black", fontSize = "18px")
+                                         list(color = "black", fontSize = "16px")
                                        } else {
-                                         list(color = "#14499F", fontSize = "14px")
+                                         list(color = "#14499F", fontSize = "13px")
                                        }
                                      }),
                    
                    bet = colDef(show = F), 
                    col_def = colDef(show = F), 
                    
-                   odds = colDef(name = "ODDS", minWidth = 60, align = "center", 
-                                 style = list(fontSize = "15px", color = "#14499F"), vAlign = "center"),
+                   odds = colDef(name = "ODDS", minWidth = 50, align = "center", 
+                                 style = list(fontSize = "14px", color = "#14499F"), vAlign = "center"),
                    
-                   bet_concluded = colDef(name = "Return", minWidth = 100, align = "center", vAlign = "center",
+                   bet_concluded = colDef(name = "Return", minWidth = 85, align = "center", vAlign = "center",
                                           style = function(value) {
                                             color <- if (is.na(value) | value > 0) "#4CAF50" else "#e22020"  # Green if above 0, red if below
                                             list(
-                                              fontSize = "20px",color = color,  # Apply conditional color
+                                              fontSize = "17px",color = color,  # Apply conditional color
                                               fontWeight = "bold"
                                             )
                                           }
@@ -2186,4 +2193,62 @@ f_all_bets_table <- function(r6){
   
 }
 
+
+f_win_loss_bars_plotly <- function(df_bets, date_range) {
+  
+  df_plot <-  df_bets %>% 
+    mutate(
+      Match = paste0(HomeTeam, " VS. ", AwayTeam),
+      bet_concluded = as.numeric(bet_concluded),
+      coloring = ifelse(bet_concluded > 0, "win", "loss")
+    ) %>% 
+    filter(
+      Date >= as.Date(date_range[1]),
+      Date <= as.Date(date_range[2])
+    )
+  
+  if(df_plot %>% filter(!is.na(bet_concluded)) %>% nrow() > 0){
+    
+    p <- ggplot(
+      data = df_plot,
+      aes(x = Date, y = bet_concluded, fill = coloring,
+          text = paste0("Game: ", Match, "\n Result: ", winning_team, "\n Your Bet: ", bet, " (", odds, ")"))
+    ) + 
+      geom_bar(
+        stat = "identity", color = "black", 
+      ) + 
+      scale_fill_manual(values = c("win" = "#4CAF50", "loss" = "#e22020")) +
+      scale_x_date(date_labels = "%b %d %Y") +
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))  + 
+      geom_hline(yintercept=0, linetype="dashed", color = "#14499F") +
+      ylab("Return") +
+      theme(
+        legend.position = "none",
+        # panel.background = element_rect(fill='transparent'),
+        # plot.background = element_rect(fill='transparent', color=NA),
+      )
+  } else{
+    p <- ggplot() + 
+      geom_point(aes(x=1,y=1), alpha=0) +
+      geom_text(aes(x = 1, y=1),label = "No Bets concluded in the selected time frame", size  =8, fill = NA) +
+      scale_x_continuous(breaks=NULL) + 
+      scale_y_continuous(breaks=NULL) + 
+      theme(
+        legend.position = 'none',
+        axis.title.x = element_blank(),
+        text = element_text(size = 14, family = "Ahronbdgg"),
+        axis.title.y =  element_blank(),
+        axis.text.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill='transparent'),
+        plot.background = element_rect(fill='transparent', color=NA),
+        panel.border = element_blank(),
+        axis.text = element_text( family = "Ahronbdgg")
+      )
+  }
+  
+  
+  ggplotly(p, tooltip = c("text"))
+  
+}
 

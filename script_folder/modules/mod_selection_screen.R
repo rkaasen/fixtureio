@@ -49,15 +49,17 @@ team_select_UI <- function(id) {
                      align = "center",
                      reactableOutput( NS(id,"schedule_table"))
               ),
+              hidden(
                 column(3, style = "background-color: #dee2e6; max-height: 250px;", class = "rounded-column",
+                       id = NS(id,"bet_counter_row"),
                        h6("Number of bets used:"), br(),
-                       h5(4), br(),
+                       h5(textOutput(NS(id,"n_bets_used"))), br(),
                        br(),
                        h6("Number of bets remaining:"), br(),
-                       h5(6)
+                       h5(textOutput(NS(id,"n_bets_left")))
                 
               )
-              
+              )
             )
           )
         )
@@ -238,6 +240,20 @@ team_select_Server <- function(id, r6) {
       })
       
       
+      if(r6$user_info$logged_in){
+        shinyjs::show("bet_counter_row")
+
+        n_bets_used = r6$user_info$bets %>% filter(is.na(bet_concluded)) %>% nrow()
+        n_bets_left = round(r6$user_info$bets_week_starting - n_bets_used,0)
+        
+        output$n_bets_used = renderText(n_bets_used)
+        output$n_bets_left = renderText(round(n_bets_left,0))
+        
+      } else{
+        shinyjs::hide("bet_counter_row")
+      }
+      
+      
       
     })
     
@@ -260,6 +276,7 @@ team_select_Server <- function(id, r6) {
       
     })
     
+
     
     
     #~~~~~~~~~~~~~~~~~

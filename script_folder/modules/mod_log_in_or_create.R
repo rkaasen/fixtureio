@@ -125,8 +125,8 @@ login_Server <- function(id, r6) {
         r6$user_info$logged_in <- TRUE
         r6$user_info$user_id <- user_id
         r6$user_info$username <- user_data$username
-        r6$user_info$bets_week_starting <- user_data$bets_week_starting
-
+        r6$user_info$bets_week_starting <- user_data$bets_week_starting %>% as.numeric()
+        
         r6$user_info$bets <- fetch_table_all_bets(user_id)
         update_last_logged_in_db(user_id)
 
@@ -137,7 +137,7 @@ login_Server <- function(id, r6) {
       }
       
       shinyjs::hide(selector = ".full-page-spinner") # Hide spinner when done
-      user_data = NULL
+      # user_data = NULL
       
     })
     

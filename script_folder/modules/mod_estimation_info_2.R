@@ -16,7 +16,7 @@ estimation_page_info_UI <- function(id) {
     useShinyjs(),
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "styles2.css"),
-      tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
+      # tags$script(src = "customtwo.js?v=1.0") # Increment the version (v=1.0) when updating
     ),
     
     div(class = "my-gradient-background",
