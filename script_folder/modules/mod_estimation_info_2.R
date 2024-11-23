@@ -23,7 +23,7 @@ estimation_page_info_UI <- function(id) {
         style = "min-height: 95vh;",
         
         fluidPage(
-          
+          card_for_match_details_UI(NS(id,"card_module")),
           page_sidebar(
             sidebar = sidebar(
               width = 400,
@@ -31,8 +31,8 @@ estimation_page_info_UI <- function(id) {
               
               fluidRow(
                 style = "display: flex; align-items: center;",
-                column(6,card_for_match_details_UI(NS(id,"card_module"))),
-                column(6,button_to_selection_UI("button_on_estimation_tab")),
+                # column(),
+                column(6, offset = 6, button_to_selection_UI("button_on_estimation_tab")),
               ),
               
               hr(),

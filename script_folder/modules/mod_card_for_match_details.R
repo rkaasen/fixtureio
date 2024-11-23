@@ -317,8 +317,11 @@ card_for_match_details_Server <- function(id, r6) {
         
         shinyjs::hide("user_info")
         shinyjs::hide("pie_chart_show")
-        
-        shinyjs::show("betting_closed")
+        if(bet_open){
+          shinyjs::hide("betting_closed")
+        }else {
+          shinyjs::show("betting_closed")
+        }
       }
       
       
@@ -360,14 +363,13 @@ card_for_match_details_Server <- function(id, r6) {
       bet_open <- f_match_open_for_betting() %>% 
         filter(match_id == match_id_chosen()) %>% 
         pull(bet_open)
-      
-      if(r6$user_info$logged_in){
+
+      if(bet_open){
         if(r6$user_info$logged_in){
           
           l_bets_fetched <- fetch_total_bets_on_match(match_id_chosen())
           l_bets(l_bets_fetched)
         }
-        
         
         trigger("set_odds_and_update_pie")
       }
@@ -390,6 +392,9 @@ card_for_match_details_Server <- function(id, r6) {
       home_odds((100/home_perc_bet))
       away_odds((100/away_perc_bet))
       draw_odds((100/draw_perc_bet))
+      
+      # print(home_odds())
+      # print(fair_home_odds())
       
       output$home_odds <- renderText(round(as.numeric(home_odds()),2))
       output$away_odds <- renderText(round(as.numeric(away_odds()),2))
@@ -420,7 +425,7 @@ card_for_match_details_Server <- function(id, r6) {
       }
       
       if(r6$user_info$logged_in){
-
+        
         output$pie_chart <- renderPlotly({
           f_pie_n_bets(
             list_n_bets = l_bets(), 
@@ -521,7 +526,7 @@ card_for_match_details_Server <- function(id, r6) {
                                                       match_id_chosen())
         r6$odds$pl <- l_after_update[[2]]
         r6$user_info$bets <-l_after_update[[3]]
-       
+        
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
         })
@@ -539,7 +544,7 @@ card_for_match_details_Server <- function(id, r6) {
     
     
     observeEvent(input$cancel, ignoreInit = T, {
-
+      
       bet_open <- f_match_open_for_betting() %>% 
         filter(match_id == match_id_chosen()) %>% 
         pull(game_15_started)
@@ -570,7 +575,7 @@ card_for_match_details_Server <- function(id, r6) {
         # l_bets <- fetch_total_bets_on_match(match_id_chosen)
         l_bets(l_after_update[[1]])
         trigger("set_odds_and_update_pie")
-
+        
         
         shinyjs::hide(selector = ".full-page-spinner") 
         

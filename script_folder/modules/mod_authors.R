@@ -59,8 +59,8 @@ authors_UI <- function(id) {
              HTML("&nbsp; &nbsp; | &nbsp; &nbsp;"),
              a("Mail", href = "mailto:Kaasen1995@hotmail,com", target = "_blank", style = "color: blue; text-decoration: none;"),
              HTML("&nbsp; &nbsp; | &nbsp; &nbsp;"),
-             a("Github", href = "https://github.com/rkaasen/fixtureio", target = "_blank", style = "color: blue; text-decoration: none;"),
-             h6("(Github repo currently private.)")
+             a("Github", href = "https://github.com/rkaasen/fixtureio", target = "_blank", style = "color: blue; text-decoration: none;")
+             # h6("(Github repo currently private.)")
              
              
              

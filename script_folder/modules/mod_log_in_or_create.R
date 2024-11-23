@@ -117,31 +117,19 @@ login_Server <- function(id, r6) {
 
       shinyjs::show(selector = ".full-page-spinner") 
       
-      con <- dbConnect(
-        RPostgres::Postgres(),
-        host = Sys.getenv("DB_HOST"),
-        dbname = Sys.getenv("DB_NAME"),
-        user = Sys.getenv("DB_USER"),
-        password = Sys.getenv("DB_PASSWORD"),
-        port = Sys.getenv("DB_PORT", "5432")
-      )
-      on.exit({
-        dbDisconnect(con)
-      }, add = TRUE)
-      
-      query <- "SELECT user_id, password_hash, username, bets_week_starting FROM users WHERE username = $1 AND is_active = TRUE"
-      user_data <- dbGetQuery(con, query, list(input$username))
+      user_data <- f_login_user_data(input$username)
       
       if (nrow(user_data) == 1 && bcrypt::checkpw(input$password, user_data$password_hash)) {
+        user_id <- user_data$user_id
+        
         r6$user_info$logged_in <- TRUE
-        r6$user_info$user_id <- user_data$user_id
+        r6$user_info$user_id <- user_id
         r6$user_info$username <- user_data$username
         r6$user_info$bets_week_starting <- user_data$bets_week_starting
 
-        r6$user_info$bets <- fetch_table_all_bets(r6)
-        
+        r6$user_info$bets <- fetch_table_all_bets(user_id)
         update_last_logged_in_db(user_id)
-        
+
         trigger("user_logged_in")
         
       } else {

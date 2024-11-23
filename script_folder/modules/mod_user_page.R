@@ -12,10 +12,6 @@ user_page_UI <- function(id) {
   
   fluidPage(
     
-    # hidden(
-    #   div(class = "full-page-spinner", tags$img(src = "spinner.gif"))
-    # ),
-    
     style = "min-height: 90vh; display: flex; flex-direction: column; justify-content: space-between;", # Main container for full height
     useShinyjs(),
     fluidRow(
@@ -70,12 +66,9 @@ user_page_Server <- function(id, r6) {
     
     
     output$all_bets_table <- renderReactable({
-      
       f_all_bets_table(r6)
-      
     })
-    
-    
+  
     
     output$winnings_ts_plot <- renderPlotly({
       

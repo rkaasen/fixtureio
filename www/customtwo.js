@@ -229,10 +229,12 @@ $(document).ready(function() {
         // Trigger the login button click
         $('#login_page-login_btn').click();
         
+        /*
         setTimeout(function() {
           $('#login_page-login_btn').click();
         }, 100); // 100 ms delay
         
+        */
         
       }
     }

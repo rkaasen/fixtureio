@@ -623,6 +623,7 @@ def lambda_handler(event, context):
     upcoming_games['TimeStamp_Uploaded'] = pd.Timestamp.now()
 
     table_name = "premier_league_fixtures_historical_enriched"
+    
     upload_df_to_postgres(upcoming_games, table_name, if_exists_rule = "append")
 
 
@@ -631,3 +632,5 @@ def lambda_handler(event, context):
 
     print("Lambda function completed without errors.")
     return {"statusCode": 200, "body": "Data upload completed successfully"}
+
+# %%

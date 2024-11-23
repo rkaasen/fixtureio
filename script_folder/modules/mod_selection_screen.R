@@ -49,7 +49,14 @@ team_select_UI <- function(id) {
                      align = "center",
                      reactableOutput( NS(id,"schedule_table"))
               ),
-              
+                column(3, style = "background-color: #dee2e6; max-height: 250px;", class = "rounded-column",
+                       h6("Number of bets used:"), br(),
+                       h5(4), br(),
+                       br(),
+                       h6("Number of bets remaining:"), br(),
+                       h5(6)
+                
+              )
               
             )
           )

@@ -409,7 +409,7 @@ f_prepare_schedule_data <- function(df, enriched = F) {
     ) %>% 
     mutate(
       Time = Time_local,
-      Date = Date_local %>% as.Date(format = "%d/%m/%Y"),
+      # Date = Date_local %>% as.Date(format = "%d/%m/%Y"),
       HomeTeam_original = `Home Team`,
       AwayTeam_original = `Away Team`
     ) 
@@ -421,7 +421,10 @@ f_prepare_schedule_data <- function(df, enriched = F) {
       rename(HomeTeam = Team) %>%
       # Join away team names
       left_join(pl_teams %>% select(Team, Team_name_from_schedule_data), by = c("AwayTeam_original"="Team_name_from_schedule_data")) %>% 
-      rename(AwayTeam = Team) 
+      rename(AwayTeam = Team) %>% 
+      mutate(
+        Date = Date_local %>% as.Date(format = "%d/%m/%Y")
+      )
   } else {}
   
   return(df_out)
@@ -472,7 +475,7 @@ f_match_open_for_betting <- function(df_enriched = pl_enriched_schedule, df_sche
     ) %>% 
     select(match_id, utc_date) %>% 
     left_join(
-      df_odds_open
+      df_odds_open, by = c("match_id" = "match_id")
     ) %>% 
     mutate(
       game_15_started = ifelse(utc_date - as.difftime(15, units = "mins") < now_utc, TRUE, FALSE),
@@ -629,7 +632,7 @@ format_bets_for_match_bets <- function(bets, match_id_input) {
   
 }
 
-fetch_table_all_bets <- function(r6) {
+fetch_table_all_bets <- function(user_id) {
   
   # Establish the connection
   con <- dbConnect(
@@ -646,7 +649,7 @@ fetch_table_all_bets <- function(r6) {
   
   query <- "SELECT bet, odds, placed, bet_concluded, bet_id, match_id FROM bets WHERE user_id = $1 AND cancelled = FALSE"
   all_bets <- dbGetQuery(con, query,
-                         list(r6$user_info$user_id
+                         list(user_id
                          )
   )
   
@@ -772,7 +775,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     user_id = r6$user_info$user_id
     bets_df = r6$user_info$bets
     bets_week_starting = r6$user_info$bets_week_starting
-    match_id_input = "Fulham-Wolves-2025"
+    match_id_input = "Man City-Tottenham-2025"
   }
   
   
@@ -929,11 +932,23 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
         `Draw Probability (%)` = `Draw Probability (%)` - perc_correction_odds_draw,
         `Away Win Probability (%)` = `Away Win Probability (%)` - perc_correction_odds_away,
         
+        Date = format(dmy_hm(Date)) %>% as_datetime(),
         TimeStamp_Uploaded = as_datetime(Sys.time(), tz = "UTC")
       ) %>% 
       select(enriched_raw_from_df %>% names())
     
     r6_update_odds_pl <- df_to_upload
+
+    
+    # r6_update_odds_pl <- raw_pl_schedules_enriched %>%
+    # 
+    #   group_by(match_id) %>%
+    #   filter(TimeStamp_Uploaded == min(TimeStamp_Uploaded)) %>% ungroup() %>%
+    #   select(enriched_raw_from_df %>% names()) %>%
+    #   mutate(Date = format(dmy_hm(Date)) %>% as_datetime(),
+    #          TimeStamp_Uploaded = as_datetime(Sys.time(), tz = "UTC"))
+
+    # 
     
     dbWriteTable(
       conn = con,
@@ -976,6 +991,28 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
 
 
 
+
+
+
+f_login_user_data <- function(user_name) {
+  
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  on.exit({
+    dbDisconnect(con)
+  }, add = TRUE)
+  
+  query <- "SELECT user_id, password_hash, username, bets_week_starting FROM users WHERE username = $1 AND is_active = TRUE"
+  user_data <- dbGetQuery(con, query, list(user_name))
+  
+  return(user_data)
+}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2028,7 +2065,8 @@ f_format_all_bets <- function(r6){
       by = c("match_id" = "match_id")
     ) %>% 
     left_join(
-      team_winning_df
+      team_winning_df,
+      by = c("match_id" = "match_id")
     )
   
   
