@@ -279,6 +279,15 @@ $(document).ready(function() {
   });
 });
 
+$(document).on('click', '#top_of_estimation_tab-bet_btn_est_page', function() {
+  console.log("top_of_estimation_tab-bet_btn_est_page clicked");
+  Shiny.setInputValue('div_clicked_bet_btn_in_est_page', Math.random());
+});
+
+console.log($("#top_of_estimation_tab-bet_btn_est_page").length);
+
+
+
 
 // OPEN STAT EXPLAINER BY CLICKED IN DIVERGENT BAR:
 

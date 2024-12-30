@@ -80,6 +80,44 @@ write_signup_to_db <- function(name, email) {
 }
 
 
+write_match_estimated_to_db <- function(match_id) {
+  # Establish the database connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # print("Database connection established.") 
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  now_user <- now()
+  now_utc <- with_tz(now_user, "UTC")  # Convert local time to UTC
+  
+  # SQL query for parameterized insertion
+  sql <- "
+    INSERT INTO match_estimated (match_id, timestamp, timestamp_utc)
+    VALUES ($1, $2, $3)
+  "
+  
+  # Execute the query with parameters
+  tryCatch({
+    dbExecute(con, sql, params = list(match_id, as.character(now_user), as.character(now_utc)))
+    print("Match estimated data added successfully!")
+  }, error = function(e) {
+    print(paste("Error adding match estimated data:", e$message))
+  })
+}
+
+
+
+
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # INTERNAL FUNCTIONS ----
@@ -939,17 +977,6 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
     
     r6_update_odds_pl <- df_to_upload
     
-    
-    # r6_update_odds_pl <- raw_pl_schedules_enriched %>%
-    # 
-    #   group_by(match_id) %>%
-    #   filter(TimeStamp_Uploaded == min(TimeStamp_Uploaded)) %>% ungroup() %>%
-    #   select(enriched_raw_from_df %>% names()) %>%
-    #   mutate(Date = format(dmy_hm(Date)) %>% as_datetime(),
-    #          TimeStamp_Uploaded = as_datetime(Sys.time(), tz = "UTC"))
-    
-    # 
-    
     dbWriteTable(
       conn = con,
       name = "premier_league_fixtures_historical_enriched",
@@ -958,11 +985,29 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
       row.names = FALSE
     )
     
+    enriched_raw_from_df <- 
+      rbind(enriched_raw_from_df,
+            df_to_upload
+            )
+    
   }
   else{
-    r6_update_odds_pl <- enriched_raw_from_df
+    
   }
+
+  raw_pl_schedules_enriched <- enriched_raw_from_df %>% 
+    mutate(
+      Date = format(as.POSIXct(Date, format = "%Y-%m-%d %H:%M:%S"), "%d/%m/%Y %H:%M"),
+      season_ending = f_calc_season_ending(Date),
+      match_id = paste0(HomeTeam, "-", AwayTeam, "-", season_ending)
+    ) %>% 
+    group_by(match_id) %>%
+    filter(TimeStamp_Uploaded == max(TimeStamp_Uploaded)) %>% 
+    ungroup()
   
+  pl_enriched_schedule <- f_prepare_schedule_data(df = raw_pl_schedules_enriched, enriched = T)
+  
+
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # UPDATE N BETS FOR USER:
   
@@ -981,7 +1026,7 @@ full_update_after_bet_place <- function(user_id, bets_df, bets_week_starting, ma
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   lout <- list(
     l_bets,
-    r6_update_odds_pl,
+    pl_enriched_schedule,
     all_bets_user
   )
   
@@ -2208,31 +2253,67 @@ f_win_loss_bars_plotly <- function(df_bets, date_range) {
     )
   
   if(df_plot %>% filter(!is.na(bet_concluded)) %>% nrow() > 0){
-    
+
     p <- ggplot(
       data = df_plot,
-      aes(x = Date, y = bet_concluded, fill = coloring,
-          text = paste0("Game: ", Match, "\n Result: ", winning_team, "\n Your Bet: ", bet, " (", odds, ")"))
-    ) + 
+      aes(
+        x = Date, 
+        y = bet_concluded, 
+        fill = coloring,
+        text = paste0(
+          "<b>Game:</b> ", Match, 
+          "<br><b>Result:</b> ", winning_team, 
+          "<br><b>Your Bet:</b> ", bet, 
+          " (Odds: ", odds, ")",
+          "<br><b>Return:</b> ", bet_concluded
+        )
+      )
+    ) +
       geom_bar(
-        stat = "identity", color = "black", 
+        stat = "identity", 
+        color = "white", 
+        size = 0.2,
+        width = 1
       ) + 
       scale_fill_manual(values = c("win" = "#4CAF50", "loss" = "#e22020")) +
-      scale_x_date(date_labels = "%b %d %Y") +
-      theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))  + 
-      geom_hline(yintercept=0, linetype="dashed", color = "#14499F") +
-      ylab("Return") +
+      scale_x_date(
+        date_labels = "%b %d, %Y",
+        date_breaks = "1 week"
+      ) +
+      theme_minimal(base_size = 14) +
       theme(
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
         legend.position = "none",
-        # panel.background = element_rect(fill='transparent'),
-        # plot.background = element_rect(fill='transparent', color=NA),
+        panel.grid.major.y = element_line(color = "grey90", size = 0.5),
+        panel.grid.minor.y = element_blank()
+      ) +
+      geom_hline(
+        yintercept = 0, 
+        linetype = "dashed", 
+        color = "#14499F",
+        size = 0.4
+      ) +
+      labs(
+        title = "Betting Results Over Time",
+        subtitle = "Green indicates wins; red indicates losses",
+        y = "Return",
+        x = "Date"
+      ) +
+      annotate(
+        "text", 
+        x = max(df_plot$Date), 
+        y = max(df_plot$bet_concluded), 
+        label = "Max Return", 
+        vjust = -1, 
+        color = "#4CAF50"
       )
+    
   } else{
-    p <- ggplot() + 
+    p <- ggplot() +
       geom_point(aes(x=1,y=1), alpha=0) +
       geom_text(aes(x = 1, y=1),label = "No Bets concluded in the selected time frame", size  =8, fill = NA) +
-      scale_x_continuous(breaks=NULL) + 
-      scale_y_continuous(breaks=NULL) + 
+      scale_x_continuous(breaks=NULL) +
+      scale_y_continuous(breaks=NULL) +
       theme(
         legend.position = 'none',
         axis.title.x = element_blank(),
@@ -2246,9 +2327,78 @@ f_win_loss_bars_plotly <- function(df_bets, date_range) {
         axis.text = element_text( family = "Ahronbdgg")
       )
   }
-  
-  
+
+
   ggplotly(p, tooltip = c("text"))
+
+  
+  
   
 }
+
+
+f_plot_n_active_bets_on_each_team <- function(team_list) {
+  
+  # Establish the connection
+  con <- dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB_HOST"),
+    dbname = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    password = Sys.getenv("DB_PASSWORD"),
+    port = Sys.getenv("DB_PORT", "5432")
+  )
+  
+  # Ensure connection closes at the end of the function, even if an error occurs
+  on.exit(dbDisconnect(con), add = TRUE)
+  
+  query <- "SELECT * FROM bets WHERE cancelled = FALSE AND bet_concluded IS NULL"
+  all_bets <- dbGetQuery(con, query)
+  
+  all_bets <- all_bets %>% left_join(
+  f_match_open_for_betting(),
+  by = c("match_id")
+  ) %>% 
+    filter(bet_open)
+  
+  df_plot = all_bets %>% 
+    filter(bet != "DRAW") %>% 
+    group_by(bet) %>% 
+    summarise(
+      count = n()
+    ) %>% ungroup()
+  
+  df_plot_all_teams <- team_list %>% left_join(df_plot, by = c("Team" = "bet")) %>% 
+    mutate(
+      count = ifelse(is.na(count),0,count)
+    ) %>% 
+    rename(bet=Team)
+  
+  
+  max_bets <- df_plot_all_teams %>% pull(count) %>% max
+  
+  p <- ggplot(df_plot_all_teams, aes(x = reorder(bet, count), y = count)) + 
+    geom_bar(fill = "#4CAF50", stat = "identity") + 
+    theme(axis.title.y = element_blank()) +
+    coord_flip() + 
+    ylab("\n Number of Bets") + 
+    scale_y_continuous(limits = c(0, max_bets*1.02)) +
+    geom_label(aes(label = count), size = 4) +
+    theme(
+      legend.position = "none",
+      axis.title.y = element_blank(),
+      text = element_text(size = 15),
+      axis.text.y = element_text(size = 13),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank(), # Remove major grid lines for full transparency
+      panel.background = element_rect(fill = 'transparent', color = NA),
+      plot.background = element_rect(fill = 'transparent', color = NA),
+      panel.border = element_blank()
+    )
+    
+
+  return(p)
+}
+
+
 

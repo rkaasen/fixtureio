@@ -82,6 +82,9 @@ def lambda_handler(event, context):
     
     table_name_to_query = "bets"
     df_bets_raw = get_data_from_db(table_name_to_query)
+    
+
+    
 
     table_name_to_query = "premier_league_data_current_lambda"
     historical_data_this_season = get_data_from_db(table_name_to_query)
@@ -95,6 +98,8 @@ def lambda_handler(event, context):
         
         # create an id column as HomeTeam + AwayTeam
         df_historical_use['id'] = df_historical_use['HomeTeam'] + "-" +df_historical_use['AwayTeam']
+        
+        #filtered_df = df_historical_use[df_historical_use['HomeTeam'] == 'Brighton']
         
     else:
         table_name_to_query = "premier_league_data_historical"
@@ -121,10 +126,9 @@ def lambda_handler(event, context):
 
     # filter away cancelled bets (cancelled = True)
     df_bets = df_bets[df_bets['cancelled'] == False]
-
+    
     # filter to bets where bet_concluded is NaN
     df_bets = df_bets[df_bets['bet_concluded'].isna()] 
-
 
     # Split column match_id on '-' and keep both parts as new columns
     df_bets[['HomeTeam', 'AwayTeam', 'season_ending']] = df_bets['match_id'].str.split('-', expand=True)
@@ -150,17 +154,22 @@ def lambda_handler(event, context):
     # select columns ['bet', 'odds', 'placed', 'bet_concluded', 'bet_id', 'match_id','user_id', 'cancelled']:
     df_bets_updated = df_bets[['bet_concluded', 'bet_id']]
     
+    #filter df_bets_raw to not include rows that are present in df_bets_updated based on bet_id:
+    df_bets_keep = df_bets_raw[~df_bets_raw['bet_id'].isin(df_bets_updated['bet_id'])]
+    
+    #filter df_bets_raw to only include rows that are present in df_bets_updated based on bet_id. but all columns from df_raw:
+    df_bets_to_update = df_bets_raw[df_bets_raw['bet_id'].isin(df_bets_updated['bet_id'])]
     #remove column bet_concluded from df_bets_raw
-    df_bets_raw = df_bets_raw.drop(columns=['bet_concluded']) 
+    df_bets_to_update = df_bets_to_update.drop(columns=['bet_concluded']) 
     
     # now merge the df_bets_updated with df_bets_raw and update only the column_bet_concluded:
-    df_bets_to_push = df_bets_raw.merge(df_bets_updated, how='left', on='bet_id')
+    df_bets_to_update = df_bets_to_update.merge(df_bets_updated, how='left', on='bet_id')
+    
+    #concatenate df_bets_to_update and df_bets_keep
+    df_bets_to_push = pd.concat([df_bets_to_update, df_bets_keep])
     
     table_name = "bets"
-    upload_df_to_postgres(df_bets_to_push, table_name)
-    
+    # upload_df_to_postgres(df_bets_to_push, table_name)
 
-    
-    
     print("Lambda function completed without errors.")
     return {"statusCode": 200, "body": "Data upload completed successfully"}

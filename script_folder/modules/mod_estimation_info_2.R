@@ -96,6 +96,44 @@ estimation_page_info_UI <- function(id) {
             ),
             
             
+            
+            fluidRow(
+              style = "margin-top: -22px; margin-bottom: -10px; padding-top: 0px; padding-bottom: -70px;",
+              column(10, offset = 1,  
+                     class = "rounded-column",
+                     style = "background: #7283b9; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; margin-top: 5px; margin-bottom: 3px; padding-top: -17px; padding-bottom: -20px;",
+                     
+                     fluidRow(
+                       column(4, align = "left", 
+                              # div(style = "height: 7px;"),
+                              h5("'Fair' odds based on estimation:", style = "color: white;"),
+                       ),
+                       column(4,
+                              fluidRow(
+                                column(2, offset = 1, align = "middle", h4(textOutput(NS(id,"fair_home")), style = "color: white;")),
+                                column(2, offset = 2, align = "middle", h4(textOutput(NS(id,"fair_draw")), style = "color: white;")),
+                                column(2, offset = 2, align = "middle", h4(textOutput(NS(id,"fair_away")), style = "color: white;")),
+                              )),
+                       column(2, offset = 0, align = "right", 
+                              # div(style = "height: 12px;"),
+                              h5("Try it out: ", style = "color: white;"),
+                              
+                       ),
+                       column(1, offset = 0, align = "left",
+                              # div(style = "height: 3px;"),
+                              actionButton(NS(id,"bet_btn_est_page"), " BET " ,class = "reactable-button", width = "75%", style = "padding-top: 0px;" )
+                       )
+                       
+                       
+                       
+                       
+                     )
+              )
+            ),
+            
+            
+            
+            
             fluidRow(
               column(10, offset = 1,  
                      
@@ -220,10 +258,16 @@ estimation_page_info_Server <- function(id, r6) {
     estimation_page_stats_numeric_Server("GOALS_CONCEDED_HA", r6, metric_name = "Goals_Conceded_lx", positive_metric = F, h2h = F, home_away=T,
                                          header = "GOALS CONCEDED HA")
     
+    observeEvent(watch("update_main_prediction_done"), {
+      output$fair_home <- renderText(r6$fair_home_odds)
+      output$fair_draw <- renderText(r6$fair_draw_odds)
+      output$fair_away <- renderText(r6$fair_away_odds)
+    })
     
-    
-    
-    
+    observeEvent(input$bet_btn, ignoreInit = T, {
+      
+      
+    })
     
     #~~~~~~~~~~~~~~~~~
     # Module Server

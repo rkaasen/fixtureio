@@ -143,7 +143,7 @@ login_Server <- function(id, r6) {
     
     # Sign up process
     observeEvent(input$signup_btn, ignoreInit = T, {
-      req(input$new_username, input$new_password, input$email)
+      req(input$new_username, input$new_password)
       
       shinyjs::show(selector = ".full-page-spinner") 
       

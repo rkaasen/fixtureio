@@ -19,7 +19,7 @@ user_page_UI <- function(id) {
       style = "display: flex; align-items: flex-start; justify-content: center; padding-top: 20px;",
       
       fluidRow( style = "display: flex; align-items: center;",
-                column(width = 4, offset = 0,
+                column(width = 4, offset = 0, style = "margin-top: 20px;",
                        h1(textOutput(NS(id, "user_names_text")))
                 ),
                 column(5, offset = 3, 
@@ -38,22 +38,24 @@ user_page_UI <- function(id) {
                 
                 div(style  = "height: 40px;"),
                 
-                column(2, class = "rounded-column", style = "margin-left: 15px; margin-top: -10px; background: #dee2e6;",
-                       h3("Select dates"),
+                column(2, class = "rounded-column", style = "margin-left: 20px; margin-right: 17px; margin-top: -10px; background: #dee2e6; border-radius: 10px;",
+                       align = "center",
+                       h4("Select dates", style = "color: #14499F;"),
                        div(style  = "height: 15px;"),
                        sliderTextInput(
                          inputId = NS(id, "date_range"), 
                          label = NULL,
                          choices = seq(as.Date("2022-01-01"), as.Date("2022-12-31"), by = "1 day"),
                          selected = c(as.Date("2022-03-01"), as.Date("2022-03-17")),
+                         width = "80%"
                        )
                 ),
                 
-                column(2, offset = 0, 
+                column(2, offset = 0, align = "center",
                        uiOutput(NS(id, "betting_return_box"))
                 ),
                 
-                column(2, offset = 0, 
+                column(2, offset = 0, align = "center",
                        uiOutput(NS(id, "bets_won_box"))
                 ),
                 
@@ -70,7 +72,7 @@ user_page_UI <- function(id) {
                                  
                                  plotlyOutput(NS(id,"winnings_ts_plot"))
                           ),
-                          column(5,
+                          column(5, style = "margin-left: 45px;",
                                  reactableOutput( NS(id,"all_bets_table")),
                           )
                           
@@ -170,7 +172,6 @@ user_page_Server <- function(id, r6) {
           pull(bet_concluded) %>%
           sum()
         
-        total_wins %>% print()
         
         # Create the value box
         value_box(
@@ -180,7 +181,7 @@ user_page_Server <- function(id, r6) {
           theme = value_box_theme(
             bg = "#dee2e6", fg = "#14499F"   
           ),
-          height = "138px"
+          height = "130px"
         )
       })
       
@@ -204,11 +205,11 @@ user_page_Server <- function(id, r6) {
         value_box(
           title = "Bets won",
           value = paste0(wins, " / ", total),
-          showcase = bs_icon("bank2"), 
+          showcase = bs_icon("trophy-fill"), 
           theme = value_box_theme(
             bg = "#dee2e6", fg = "#14499F"   
           ),
-          height = "138px"
+          height = "130px"
         )
       })
       
@@ -220,11 +221,11 @@ user_page_Server <- function(id, r6) {
         value_box(
           title = "Bets placed this week",
           value = paste0(n_bets_used, " / ", round(r6$user_info$bets_week_starting,0)),
-          showcase = bs_icon("bank2"), 
+          showcase = bs_icon("bank"), 
           theme = value_box_theme(
             bg = "#dee2e6", fg = "#14499F"   
           ),
-          height = "138px"
+          height = "130px"
         )
       })
       

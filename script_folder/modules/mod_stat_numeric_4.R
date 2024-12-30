@@ -81,7 +81,7 @@ estimation_page_stats_numeric_UI <- function(id, header = "DEFAULT_HEADER", h2h 
                                    
                                    div(style = "height: 10px;"),
                                    div( id = NS(id,"ggplot_divergent_div"), style = "cursor: pointer;", class = "clickable-border",
-                                       plotOutput(NS(id,"ggplot_divergent"), width = "100%", height = "70px")
+                                        plotOutput(NS(id,"ggplot_divergent"), width = "100%", height = "70px")
                                    )
                                    
                             ),
@@ -161,19 +161,30 @@ estimation_page_stats_numeric_Server <- function(id, r6,
       
       
       if(h2h | home_away){
-        
-        updateRadioButtons(
-          session = session,
-          inputId = "n_matches",
-          selected = 3
-        )
+        if(as.numeric(input$n_matches) == 5){
+          
+          shinyjs::show("games_3_btn")
+          
+          updateRadioButtons(
+            session = session,
+            inputId = "n_matches",
+            selected = 3
+          )
+        } else{
+          shinyjs::hide("games_3_btn")
+        }
         
       } else {
+        if(as.numeric(input$n_matches) == 10){
+          shinyjs::show("games_3_btn")
         updateRadioButtons(
           session = session,
           inputId = "n_matches",
           selected = 5
         )
+        }else{
+          shinyjs::hide("games_3_btn")
+        }
       }
       
     })
@@ -266,13 +277,14 @@ estimation_page_stats_numeric_Server <- function(id, r6,
           shinyjs::show("hide_all")
           shinyjs::hide("hide_stat")
           shinyjs::show("not_enough_data")
+          shinyjs::hide("games_3_btn")
           
           if(h2h | home_away){
             if (n_matches == 5){
-              shinyjs::show("set_n_games_row")
+              shinyjs::show("games_3_btn")
             }
           }else if (n_matches==10) {
-            shinyjs::show("set_n_games_row")
+            shinyjs::show("games_3_btn")
           }
           
           output$not_enough_data_text = renderText(glue('"{header}"'))

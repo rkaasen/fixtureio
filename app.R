@@ -98,7 +98,7 @@ ui <- function(request) {
       tags$img(src = "Logo1.jpg", class = "top-image", id = "logo_img", width = "250px"),  # Adjust the path to your image
       
       # H1 element to the right of the image
-      tags$h1("PREDICTIONS YOU BELIEVE IN", class = "header-right", style = "color: white !important;")
+      tags$h2("PREDICTIONS YOU BELIEVE IN", class = "header-right", style = "color: white !important;")
     ),
     
     
@@ -265,10 +265,12 @@ server <- function(input, output, session) {
   r6$user_info$bets_week_starting <- NULL
   
   
+  
   r6$data$pl_historic <- raw_pl_data_all
   # r6$data$ll_historic <- read.csv("Data/SP1.csv") %>% as_tibble()
   
   r6$data$pl_schedule <- pl_schedule
+  
   # r6$data$ll_schedule <- ll_schedule
   
   r6$team_list$pl_teams <- pl_teams
@@ -288,10 +290,10 @@ server <- function(input, output, session) {
   init("button_to_estimation", "button_to_selection", "button_select_matchup")
   init("button_app", "button_HTU", "button_methodology", "button_data", "button_authors")
   init("teams_selected_from_table")
-  init("update_main_prediction")
+  init("update_main_prediction", "update_main_prediction_done")
   init("new_stats_chosen")
   init("full_screen_card_closed")
-  init("open_analytics_card_home", "open_analytics_card", "open_analytics_card_away")
+  init("open_analytics_card_home", "open_analytics_card", "open_analytics_card_away", "open_analytics_card_with_bet")
   init("user_logged_in", "user_logged_out")
   init("divergent_click", "compare_btn_click")
   init("set_odds_and_update_pie")
@@ -362,9 +364,14 @@ server <- function(input, output, session) {
   observeEvent(input$div_clicked_away_team, {
     trigger("open_analytics_card_away")
   })
-  observeEvent(input$div_clicked_result_col, {
+  observeEvent(input$div_clicked_result_col, ignoreInit = T, {
     trigger("open_analytics_card")
   })
+  observeEvent(input$div_clicked_bet_btn_in_est_page, ignoreInit = T,  {
+    trigger("open_analytics_card_with_bet")
+  })
+
+  
   
   observeEvent(input$go_to_login_page, {
     nav_select("navbar", "USER_PAGE")
@@ -382,90 +389,6 @@ server <- function(input, output, session) {
   observeEvent(input$feedback_clicked, ignoreInit = T, {
     nav_select("navbar", "ABOUT/AUTHORS")
   })
-  
-  # # Handle betting link clicks
-  # observeEvent(input$betting_clicked, ignoreInit = TRUE, {
-  #   showModal(
-  #     tagList(
-  #       tags$style(HTML("
-  #       .modal-dialog {
-  #         width: 50vw !important;
-  #         max-width: 80vw !important;
-  #       }
-  #     ")),
-  #     modalDialog(
-  #       title = "Exciting New Betting Feature!",
-  #       div(
-  #         tags$p("Get ready for our exciting new betting feature:", style = "font-weight: 450;"),
-  #         tags$ul(
-  #           tags$li(
-  #             tags$span(
-  #               "Weekly Free Bets: ", 
-  #               style = "font-weight: 750;"
-  #             ),
-  #             tags$span(
-  #               "Receive free virtual bets every Monday to wager on upcoming matches.", 
-  #               style = "font-weight: 500;"
-  #             )
-  #           ),
-  #           tags$li(
-  #             tags$span(
-  #               "Community-Driven Odds: ", 
-  #               style = "font-weight: 750;"
-  #             ),
-  #             tags$span(
-  #               "Watch odds update continuously based on the community's bets—you're not just predicting outcomes, you're competing with fellow fans!", 
-  #               style = "font-weight: 500;"
-  #             )
-  #           ),
-  #           tags$li(
-  #             tags$span(
-  #               "Join the Competition: ", 
-  #               style = "font-weight: 750;"
-  #             ),
-  #             tags$span(
-  #               "Sharpen your prediction skills, strategize your bets, and see how you stack up against others.", 
-  #               style = "font-weight: 500;"
-  #             )
-  #           )
-  #         ),
-  #         tags$p("Stay tuned—this is just the beginning of a more immersive and interactive football experience!", style = "font-weight: 6000;")
-  #       ),
-  #       br(),
-  #       hr(),
-  #       h5("If you want early access to the betting feature:"),
-  #       textInput("signup_name", "Name", placeholder = "Enter your name"),
-  #       textInput("signup_email", "Email", placeholder = "Enter your email"),
-  #       actionButton("submit_signup", "Submit", class = "btn-success"),
-  #       
-  #       easyClose = TRUE,
-  #       footer = modalButton("Close")
-  #     )
-  #   )
-  #   )
-  # })
-  # 
-  # 
-  # # Handle signup submission
-  # observeEvent(input$submit_signup, {
-  #   name <- input$signup_name
-  #   email <- input$signup_email
-  #   
-  #   # Validate inputs
-  #   if (is.null(name) || name == "" || is.null(email) || email == "") {
-  #     showNotification("Please provide both name and email.", type = "error")
-  #     return()
-  #   }
-  #   
-  #   # Write signup to the database
-  #   tryCatch({
-  #     write_signup_to_db(name, email)
-  #     showNotification("Thank you for signing up!", type = "message")
-  #     removeModal() # Close the modal upon successful submission
-  #   }, error = function(e) {
-  #     showNotification("An error occurred: Could not save your signup.", type = "error")
-  #   })
-  # })
   
   
   

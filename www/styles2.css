@@ -49,13 +49,16 @@ p {
 }
 
 .form-control{
-  font-weight: 700
+  font-weight: 700;
 }
 
 element.style {
-  font-weight: 700
+  font-weight: 700;
 }
 
+.bslib-value-box {
+  font-weight: 900;  /*not working */
+}
 
 
 

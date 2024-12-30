@@ -42,7 +42,7 @@ card_for_match_details_UI <- function(id) {
                        
                        div(style = "height: 10px;"),
                        
-                       # fair offs row
+                       # fair odds row
                        fluidRow(
                          column(12, offset = 0,  
                                 class = "rounded-column",
@@ -58,7 +58,7 @@ card_for_match_details_UI <- function(id) {
                                            column(2, offset = 2, align = "middle", h4(textOutput(NS(id,"fair_away")), style = "color: white;")),
                                          )),
                                   column(2, offset = 0, align = "right", div(style = "height: 12px;"),
-                                         h5("Not live yet: ", style = "color: white;"),
+                                         h5("Try it out: ", style = "color: white;"),
                                          
                                   ),
                                   column(1, offset = 0, align = "left",div(style = "height: 3px;"),
@@ -85,7 +85,7 @@ card_for_match_details_UI <- function(id) {
                                           style = "background: #505c83;",
                                           fluidRow(
                                             column(4, align = "left", div(style = "height: 9px;"),
-                                                   h5("Your current odds (Placeholder values):", style = "color: white;"),
+                                                   h5("Your current odds:", style = "color: white;"),
                                             ),
                                             column(4,
                                                    fluidRow(
@@ -227,6 +227,12 @@ card_for_match_details_Server <- function(id, r6) {
       session$sendCustomMessage("toggleCardFullscreen", session$ns("my_card"))
     })
     
+    observeEvent(list(input$external_toggle, watch("open_analytics_card_with_bet")), ignoreInit = T, {
+      shinyjs::show("card_div")
+      nav_select(id = "tabs", selected = "top_of_estimation_tab-card_module-the_match_tab")
+      session$sendCustomMessage("toggleCardFullscreen", session$ns("my_card"))
+    })
+    
     observeEvent(watch("open_analytics_card_home"), ignoreInit = T,{
       shinyjs::show("card_div")
       nav_select(id = "tabs", selected = "top_of_estimation_tab-card_module-home_team_tab")
@@ -255,7 +261,7 @@ card_for_match_details_Server <- function(id, r6) {
     })
     
     
-    observeEvent(list(input$external_toggle,watch("open_analytics_card_home"), watch("open_analytics_card_away"), watch("open_analytics_card")), ignoreInit = T, {
+    observeEvent(list(input$external_toggle,watch("open_analytics_card_home"), watch("open_analytics_card_away"), watch("open_analytics_card_with_bet"), watch("open_analytics_card")), ignoreInit = T, {
       
       shinyjs::removeClass(id = "top_of_estimation_tab-card_module-in_main_card-ggplot_overall_percent_div", class = "clickable-border", asis = T)
       shinyjs::removeClass(id = "top_of_estimation_tab-in_main_page-ggplot_overall_percent_div", class = "clickable-border", asis = T)
@@ -352,9 +358,15 @@ card_for_match_details_Server <- function(id, r6) {
       output$fair_draw <- renderText(fair_draw_odds())
       output$fair_away <- renderText(fair_away_odds())
       
+      r6$fair_home_odds <- fair_home_odds()
+      r6$fair_draw_odds <- fair_draw_odds()
+      r6$fair_away_odds <- fair_away_odds()
+      
+      trigger("update_main_prediction_done")
+      
     })
     
-    observeEvent(input$bet_btn, {
+    observeEvent(list(input$bet_btn, watch("open_analytics_card_with_bet")), ignoreInit = T, {
       
       shinyjs::show("your_odds_row")
       
@@ -369,6 +381,7 @@ card_for_match_details_Server <- function(id, r6) {
           
           l_bets_fetched <- fetch_total_bets_on_match(match_id_chosen())
           l_bets(l_bets_fetched)
+          
         }
         
         trigger("set_odds_and_update_pie")
@@ -382,8 +395,11 @@ card_for_match_details_Server <- function(id, r6) {
         filter(
           HomeTeam == r6$selected_home_team,
           AwayTeam == r6$selected_away_team
+        ) %>% 
+        filter(
+          TimeStamp_Uploaded == max(TimeStamp_Uploaded)
         )
-      
+
       home_perc_bet <- odds_row %>% pull(`Home Win Probability (%)`)
       away_perc_bet <- odds_row %>% pull(`Away Win Probability (%)`)
       draw_perc_bet <- odds_row %>% pull(`Draw Probability (%)`)
@@ -393,12 +409,10 @@ card_for_match_details_Server <- function(id, r6) {
       away_odds((100/away_perc_bet))
       draw_odds((100/draw_perc_bet))
       
-      # print(home_odds())
-      # print(fair_home_odds())
-      
       output$home_odds <- renderText(round(as.numeric(home_odds()),2))
       output$away_odds <- renderText(round(as.numeric(away_odds()),2))
       output$draw_odds <- renderText(round(as.numeric(draw_odds()),2))
+      
       
       if(home_odds()-fair_home_odds() > 0.2){
         shinyjs::addClass(id = "btn_home_odds", class = "odds-button-better")
@@ -436,7 +450,6 @@ card_for_match_details_Server <- function(id, r6) {
         output$your_bets_table <- renderReactable({
           f_your_bets_table(r6)
         })
-        
         
         output$home_team_odds_change <- renderText(paste0(r6$selected_home_team_short, ": \n", round(odds_row %>% pull(changed_since_start_home),3)))
         output$draw_team_odds_change <- renderText(paste0("DRAW", ": \n", round(odds_row %>% pull(changed_since_start_draw),3)))
