@@ -92,7 +92,7 @@ how_it_works_UI <- function(id) {
                                actionButton(NS(id,"try_it_btn_top"), label = "TRY IT YOURSELF !", width = "160px",style = "height: 35px",class = "reactable-button" ),
                                '  button in the middle of the screen'
                              ),
-
+                             
                              
                       )
                     ),  
@@ -112,11 +112,11 @@ how_it_works_UI <- function(id) {
                                actionButton(NS(id,"dummy1"), label = "ANALYZE", width = "95px",style = "height: 35px",class = "reactable-button" ),
                                '  button in the right side of the table'
                              ),
-# 
-#                              br(),br(),
-#                              "To find the Specific match you want to analyze,",
-#                              br(),
-#                              "Scroll the table, or use the navigation in the left side of the selection page"
+                             # 
+                             #                              br(),br(),
+                             #                              "To find the Specific match you want to analyze,",
+                             #                              br(),
+                             #                              "Scroll the table, or use the navigation in the left side of the selection page"
                              
                       )
                     ),  
@@ -219,6 +219,47 @@ how_it_works_UI <- function(id) {
                     ),
                     id = "acc"
                   ),
+                  div(style = "height: 25px;"),
+                  hr(),
+                  div(style = "height: 25px;"),
+                  
+                  # 'BETTING'
+                  accordion(  open = F,
+                    accordion_panel(
+                      title = "TRY OUT THE FRIENDLY BETTING", 
+                      # icon = bsicons::bs_icon("1-circle-fill"),
+                      column(10,offset = 1, 
+                             
+                             h5("Getting started:"),
+                             br(),
+                             
+                             # Add a div to contain the text with the highlighted word
+                             div(
+                               'When analysing a match, click the ',
+                               actionButton(NS(id,"dummy5"), label = "BET", style = "height: 35px",class = "reactable-button" ),
+                               ' Button under the away team logo'
+                             ),
+                             
+                             br(),
+                             "Here you can chose your desired outcome and use the ",
+                             actionButton(NS(id,"dummy6"), label = icon("check-circle"), class = "odds-button-place-bet"),
+                             ' Button to place a bet',
+                             
+                             br(), br(),
+                             hr(),
+                             h5("Rules:"),
+                             br(),
+
+                             '-  Each week each user starts 10 free bets',
+                             br(),
+                             '-  At the end of the week each bet is evaluated, and tracked in the user dashboard',
+                             br(),
+                             '-  Bets update dynamically based on the bets of other users. So it might pay off to bet on an outsider',
+                             
+                             
+                      )
+                    ),  id = "acc"
+                  ),
                   div(style = "height: 40px;"),
            )
     )
@@ -247,6 +288,13 @@ how_it_works_Server <- function(id) {
       showNotification("Example slider only.", type = "error")
     })
     observeEvent(input$dummy4, ignoreInit = T, {
+      showNotification("Example list only.", type = "error")
+    })
+    
+    observeEvent(input$dummy5, ignoreInit = T, {
+      showNotification("Example list only.", type = "error")
+    })
+    observeEvent(input$dummy6, ignoreInit = T, {
       showNotification("Example list only.", type = "error")
     })
     

@@ -49,28 +49,28 @@ team_select_UI <- function(id) {
                      align = "center",
                      reactableOutput( NS(id,"schedule_table"))
               ),
-              hidden(
-                column(3, style = "background-color: #dee2e6; max-height: 200px;", class = "rounded-column",
-                       id = NS(id,"bet_counter_row"),
-                       h6("Number of bets used:"), #br(),
-                       h5(textOutput(NS(id,"n_bets_used"))), #br(),
-                       br(),
-                       h6("Number of bets remaining:"), br(),
-                       h5(textOutput(NS(id,"n_bets_left"))),
-                       div(style = "height: 75px;"),
-                       
-                       h4("Placed bets on open games:"),
-                       plotOutput(NS(id,"n_bets_on_teams"), width = "100%", height = "650px")
-                       
-                )
-                
-              )
               
+              column(3, style = "background-color: #dee2e6; max-height: 100px;", class = "rounded-column",
+                     id = NS(id,"bet_counter_row"),
+                     h5("Number of bets used:"), #br(),
+                     h6(textOutput(NS(id,"n_bets_used"))), #br(),
+                     # br(),
+                     # h6("Number of bets remaining:"), br(),
+                     # h5(textOutput(NS(id,"n_bets_left"))),
+                     # div(style = "height: 75px;"),
+                     
+                     div(style = "height: 80px;"),
+                     
+                     h5("Bets placed on open games:"),
+                     plotOutput(NS(id,"n_bets_on_teams"), width = "100%", height = "650px")
+                     
+                     
+                     
+              )
             )
           )
         )
     )
-    
   )}
 
 
@@ -127,104 +127,104 @@ team_select_Server <- function(id, r6) {
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # CONTROLS main table
     
-    observeEvent(list(input$league_select_buttons,input$league_select, input$team_select, watch("user_logged_in"), 
-                      watch("user_logged_out"), watch("button_to_selection")), {
-                        
-                        # filter for the right data to be showed
-                        if(input$team_select != "Select Team") {
-                          df_filtered_team <- 
-                            rbind(r6$data$schedule %>% filter(HomeTeam == input$team_select),
-                                  r6$data$schedule %>% filter(AwayTeam == input$team_select)
-                            ) 
-                        } else{
-                          
-                          df_filtered_team <- r6$data$schedule
-                        }
-                        
-                        
-                        df_use <- df_filtered_team %>% 
-                          select(Date, Time, HomeTeam, AwayTeam) %>% 
-                          filter(Date >= yesterday) %>%
-                          arrange(Date) %>% 
-                          f_prepare_schedule_view %>% 
-                          mutate(
-                            analyze = "", date_use = Date)
-                        
-                        formatted_dates_list <- lapply(df_use$date_use, f_format_date_with_suffix) 
-                        
-                        df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
-                          mutate(Date = formatted_dates) %>% 
-                          select(-formatted_dates) 
-                        
-                        
-                        columns_list = list(
-                          Date = colDef(minWidth = 165, align = "left", vAlign = "center"),
-                          date_use = colDef(show = F), 
-                          Time = colDef(minWidth = 85, align = "center", , vAlign = "center"), 
-                          HomeTeam = colDef(name = "Home Team", minWidth = 200, align = "right", vAlign = "center"),
-                          vs_col = colDef(name = "", minWidth = 40, align = "center", vAlign = "center"),
-                          AwayTeam = colDef(name = "Away Team", minWidth = 200, vAlign = "center", align = "left"),
-                          # Analyze column:
-                          analyze = colDef(
-                            name = "",
-                            sortable = FALSE, vAlign = "center",
-                            cell = function() htmltools::tags$button(class = "reactable-button", "Analyze")
-                          )
-                        )
-                        
-                        if(r6$user_info$logged_in){
-                          df_odds_open <- f_match_open_for_betting() %>% 
-                            mutate(Bets = ifelse(bet_open, "Open", "Not Open")) %>% 
-                            select(match_id, Bets)
-                          
-                          
-                          df_use <- df_use %>%
-                            
-                            mutate(
-                              season_ending = f_calc_season_ending(utc_date),
-                              match_id = paste0(HomeTeam, "-", AwayTeam , "-", season_ending),
-                            ) %>% 
-                            left_join(df_odds_open) %>% 
-                            
-                            left_join(
-                              r6$user_info$bets  %>% group_by(match_id) %>%
-                                summarise(`Your Bets` = n()) %>%
-                                ungroup()
-                            ) %>% 
-                            mutate(
-                              col_def = case_when(
-                                Bets == "Open" ~ "#4CAF50",
-                                Bets == "Not Open" ~ "#e22020",
-                                T ~ "#4CAF50"
-                              )
-                            ) %>% 
-                            select(-match_id, -season_ending)
-                          
-                          
-                          if ("Your Bets" %in% names(df_use)){
-                            columns_list$`Your Bets` <-  colDef(name = "Your bets", minWidth = 100, align = "center", style = list(fontSize = "18px"))
-                          }
-                          
-                          columns_list$Bets <- colDef( minWidth = 110 , style = list(fontSize = "12px") , vAlign = "center",
-                                                       cell = pill_buttons( data = df_use,
-                                                                            color_ref  = "col_def",
-                                                                            text_color = "white"  # White text color for contrast
-                                                       )
-                          )
-                          
-                          columns_list$col_def <-  colDef(show = F)
-                          
-                        }
-                        
-                        
-                        output$schedule_table <- renderReactable({
-                          reactable(df_use, 
-                                    columns = columns_list,
-                                    # groups (by date)
-                                    groupBy = "Date",  defaultExpanded = TRUE,
-                                    # Default stuff
-                                    pagination = FALSE, sortable = FALSE, fullWidth = FALSE,
-                                    onClick = JS("function(rowInfo, column) {
+    observeEvent(
+      list(input$league_select_buttons,input$league_select, input$team_select, watch("user_logged_in"), 
+           watch("user_logged_out"), watch("button_to_selection")), 
+      {
+        
+        # filter for the right data to be showed
+        if(input$team_select != "Select Team") {
+          df_filtered_team <- 
+            rbind(r6$data$schedule %>% filter(HomeTeam == input$team_select),
+                  r6$data$schedule %>% filter(AwayTeam == input$team_select)
+            ) 
+        } else{
+          
+          df_filtered_team <- r6$data$schedule
+        }
+        
+        
+        df_use <- df_filtered_team %>% 
+          select(Date, Time, HomeTeam, AwayTeam) %>% 
+          filter(Date >= yesterday) %>%
+          arrange(Date) %>% 
+          f_prepare_schedule_view %>% 
+          mutate(
+            analyze = "", date_use = Date)
+        
+        formatted_dates_list <- lapply(df_use$date_use, f_format_date_with_suffix) 
+        
+        df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
+          mutate(Date = formatted_dates) %>% 
+          select(-formatted_dates) 
+        
+        
+        columns_list = list(
+          Date = colDef(maxWidth = 120, align = "left", vAlign = "center", style = list(fontSize = "12px")),
+          date_use = colDef(show = F), 
+          Time = colDef(minWidth = 85, align = "center", , vAlign = "center"), 
+          HomeTeam = colDef(name = "Home Team", minWidth = 200, align = "right", vAlign = "center"),
+          vs_col = colDef(name = "", minWidth = 40, align = "center", vAlign = "center"),
+          AwayTeam = colDef(name = "Away Team", minWidth = 200, vAlign = "center", align = "left"),
+          # Analyze column:
+          analyze = colDef(
+            name = "",
+            sortable = FALSE, vAlign = "center",
+            cell = function() htmltools::tags$button(class = "reactable-button", "Analyze")
+          )
+        )
+        
+        
+        df_odds_open <- f_match_open_for_betting() %>% 
+          mutate(Bets = ifelse(bet_open, "Open", "Not Open")) %>% 
+          select(match_id, Bets)
+        
+        
+        df_use <- df_use %>%
+          
+          mutate(
+            season_ending = f_calc_season_ending(utc_date),
+            match_id = paste0(HomeTeam, "-", AwayTeam , "-", season_ending),
+          ) %>% 
+          left_join(df_odds_open) %>% 
+          mutate(
+            col_def = case_when(
+              Bets == "Open" ~ "#4CAF50",
+              Bets == "Not Open" ~ "#e22020",
+              T ~ "#4CAF50"
+            )
+          )
+        
+        columns_list$col_def <-  colDef(show = F)
+        columns_list$Bets <- colDef( minWidth = 110 , style = list(fontSize = "12px") , vAlign = "center", align = 'center',
+                                     cell = pill_buttons( data = df_use,
+                                                          color_ref  = "col_def",
+                                                          text_color = "white"  # White text color for contrast
+                                     ))
+        
+        if(r6$user_info$logged_in){
+          df_use <- df_use %>%
+            
+            left_join(
+              r6$user_info$bets  %>% group_by(match_id) %>%
+                summarise(`Your Bets` = n()) %>%
+                ungroup()
+            ) 
+          columns_list$`Your Bets` <-  colDef(name = "Your bets", minWidth = 100, align = "center", style = list(fontSize = "16px"))
+        }
+        
+        df_use <- df_use %>%
+          select(-match_id, -season_ending)
+      
+      
+      output$schedule_table <- renderReactable({
+        reactable(df_use, 
+                  columns = columns_list,
+                  # groups (by date)
+                  groupBy = "Date",  defaultExpanded = TRUE,
+                  # Default stuff
+                  pagination = FALSE, sortable = FALSE, fullWidth = FALSE,
+                  onClick = JS("function(rowInfo, column) {
                     // Only handle click events on the 'details' column
                     if (column.id !== 'analyze') {
                       return
@@ -235,39 +235,42 @@ team_select_Server <- function(id, r6) {
                       + '&&' + rowInfo.values['date_use'] + '&&' + rowInfo.values['Time'], { priority: 'event' })
                     }
                   }"),
-                                    
-                                    class = "selection_table",
-                                    
-                                    theme = reactableTheme(
-                                      backgroundColor = "transparent"
-                                    )
-                          )
-                          
-                        })
-                        
-                        
-                        if(r6$user_info$logged_in){
-                          
-                          shinyjs::show("bet_counter_row")
-                          shinyjs::show("n_bets_team_row")
-                          
-                          
-                          n_bets_used = r6$user_info$bets %>% filter(is.na(bet_concluded)) %>% nrow()
-                          n_bets_left = round(r6$user_info$bets_week_starting - n_bets_used,0)
-                          
-                          output$n_bets_used = renderText(n_bets_used)
-                          output$n_bets_left = renderText(round(n_bets_left,0))
-                          
-                          output$n_bets_on_teams <-  renderPlot({
-                            f_plot_n_active_bets_on_each_team(r6$team_list$league %>% select(Team))
-                          }, bg="transparent")
-                          
-                        } else{
-                          shinyjs::hide("bet_counter_row")
-                          shinyjs::hide("n_bets_team_row")
-                        }
-                        
-                      })
+                  
+                  class = "selection_table",
+                  
+                  theme = reactableTheme(
+                    backgroundColor = "transparent"
+                  )
+        )
+        
+      })
+      
+      
+      # if(r6$user_info$logged_in){
+      
+      # shinyjs::show("bet_counter_row")
+      # shinyjs::show("n_bets_team_row")
+      
+      if(r6$user_info$logged_in){
+        n_bets_used = r6$user_info$bets %>% filter(is.na(bet_concluded)) %>% nrow()
+        # n_bets_left = round(r6$user_info$bets_week_starting - n_bets_used,0)
+        
+        output$n_bets_used = renderText(paste0(n_bets_used, " / ", r6$user_info$bets_week_starting))
+        # output$n_bets_left = renderText(round(n_bets_left,0))
+      } else {
+        output$n_bets_used = renderText("Please log in to use betting feature")
+      }
+      
+      output$n_bets_on_teams <-  renderPlot({
+        f_plot_n_active_bets_on_each_team(r6$team_list$league %>% select(Team))
+      }, bg="transparent")
+      
+      # } else{
+      #   shinyjs::hide("bet_counter_row")
+      #   shinyjs::hide("n_bets_team_row")
+      # }
+      
+  })
     
     
     
@@ -291,7 +294,7 @@ team_select_Server <- function(id, r6) {
         
         
         user_id_check <- ifelse(is.null(r6$user_info$user_id),"null",r6$user_info$user_id)
-        if(user_id_check != "641becda-79e7-40fa-b5fa-69e967821689"){
+        if(user_id_check != "641becda-79e7-40fa-b5fa-69e967821689" & user_id_check != "a08fabb6-5529-4763-a44d-89d829809bac"){
           year <- (f_calc_season_ending(as.Date(date)))
           match_id_write = paste0(home_team, "-", away_team, "-", year)
           write_match_estimated_to_db(match_id = match_id_write)
@@ -307,8 +310,8 @@ team_select_Server <- function(id, r6) {
     
     #~~~~~~~~~~~~~~~~~
     # Module Server
-  })
-}
+})
+  }
 
 
 

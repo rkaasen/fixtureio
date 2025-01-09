@@ -51,7 +51,7 @@ from sqlalchemy import create_engine
 # table_name_to_query = "premier_league_data_current_lambda"
 # table_name_to_query = "premier_league_data_historical"
 # table_name_to_query = "premier_league_fixtures_current_lambda"
-# table_name_to_query = "users"
+table_name_to_query = "users"
 # table_name_to_query = "premier_league_fixtures_historical_enriched"
 
 # table_name_to_query = "match_estimated"
@@ -177,7 +177,7 @@ if 1==2:
     try:
         with conn.cursor() as cursor:
             # Delete rows where username is 'test'
-            cursor.execute("DELETE FROM users WHERE username = 'TestUser123'")
+            cursor.execute("DELETE FROM users WHERE username = 'FinalTest'")
             print("Rows deleted.")
             conn.commit()
     except Exception as e:

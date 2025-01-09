@@ -3,7 +3,7 @@
 notification_bar_UI <- function() {
   div(
     class = "notification-bar",
-    "App is in testing. Please leave feedback ",
+    "App is in (Beta) testing. Please leave feedback ",
     tags$a(
       href = "#",  # Prevent navigation
       class = "feedback-link notification-link",  # Use a specific class for feedback
@@ -640,7 +640,7 @@ cancel_bet_in_db <- function(bet_id,  new_cancelled = TRUE) {
   # Execute the query
   tryCatch({
     dbExecute(con, sql)
-    showNotification("Bet updated successfully!")
+    # showNotification("Bet updated successfully!")
   }, error = function(e) {
     # showNotification(paste("Error updating bet:", e$message), type = "error")
   })

@@ -1,4 +1,4 @@
-# Sys.setenv(LANG = "en")
+Sys.setenv(LANG = "en")
 
 # Load necessary libraries
 library(rsconnect)
@@ -66,8 +66,8 @@ source("script_folder/modules/mod_log_in_or_create.R")
 source("script_folder/modules/mod_user_page.R")
 
 
-sysfonts::font_add( family = "Ahronbdgg", regular = "www/ahronbd.ttf")
-showtext::showtext_auto()
+# sysfonts::font_add( family = "Ahronbdgg", regular = "www/ahronbd.ttf")
+# showtext::showtext_auto()
 
 
 
@@ -370,7 +370,7 @@ server <- function(input, output, session) {
   observeEvent(input$div_clicked_bet_btn_in_est_page, ignoreInit = T,  {
     trigger("open_analytics_card_with_bet")
   })
-
+  
   
   
   observeEvent(input$go_to_login_page, {

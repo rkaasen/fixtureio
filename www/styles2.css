@@ -546,7 +546,7 @@ background-color: #4CAF50;
 .selection_table .rt-thead .rt-th .rt-th-inner {
   padding: 12px 4px !important;  /* Adjust these values as needed */
   font-weight: bold;             /* Optional: make header text bold */
-  text-align: center;            /* Optional: center-align header text */
+  /* text-align: center;             Optional: center-align header text */
 }
 
 /* Make the overall reactable table container transparent */

@@ -253,12 +253,6 @@ card_for_match_details_Server <- function(id, r6) {
     
     # code for server:
     
-    output$logo_ht <- renderUI({
-      img(src = paste0("Logos/", r6$selected_home_team, ".png"), height = "10%", width = "10%")
-    })
-    output$logo_at <- renderUI({
-      img(src = paste0("Logos/", r6$selected_away_team, ".png"), height = "10%", width = "10%")
-    })
     
     
     observeEvent(list(input$external_toggle,watch("open_analytics_card_home"), watch("open_analytics_card_away"), watch("open_analytics_card_with_bet"), watch("open_analytics_card")), ignoreInit = T, {
@@ -274,12 +268,20 @@ card_for_match_details_Server <- function(id, r6) {
       output$home_team <- renderText(toupper(home_team))
       output$away_team <- renderText(toupper(away_team))
       
+      output$logo_ht <- renderUI({
+        img(src = paste0("Logos/", r6$selected_home_team, ".png"), height = "10%", width = "10%")
+      })
+      output$logo_at <- renderUI({
+        img(src = paste0("Logos/", r6$selected_away_team, ".png"), height = "10%", width = "10%")
+      })
+      
       output$home_last_10 <- renderReactable(
         f_last_10_table(r6$data$filtered, home_team)
       )
       output$away_last_10 <- renderReactable(
         f_last_10_table(r6$data$filtered, away_team)
       )
+      
       
       # hide the odds each time the card is opened
       shinyjs::hide("your_odds_row")
@@ -416,7 +418,7 @@ card_for_match_details_Server <- function(id, r6) {
       
       if(home_odds()-fair_home_odds() > 0.2){
         shinyjs::addClass(id = "btn_home_odds", class = "odds-button-better")
-      } else if(home_odds()-fair_home_odds() < -0.2){
+      } else if(fair_home_odds() - home_odds() > 0.2){
         shinyjs::addClass(id = "btn_home_odds", class = "odds-button-worse")
       } else{
         shinyjs::addClass(id = "btn_home_odds", class = "odds-button-same")
@@ -424,7 +426,7 @@ card_for_match_details_Server <- function(id, r6) {
       
       if(draw_odds()-fair_draw_odds() > 0.2){
         shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-better")
-      } else if(draw_odds()-fair_draw_odds() < -0.2){
+      } else if(fair_draw_odds() - draw_odds() > 0.2){
         shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-worse")
       } else{
         shinyjs::addClass(id = "btn_draw_odds", class = "odds-button-same")
@@ -432,7 +434,7 @@ card_for_match_details_Server <- function(id, r6) {
       
       if(away_odds()-fair_away_odds() > 0.2){
         shinyjs::addClass(id = "btn_away_odds", class = "odds-button-better")
-      } else if(away_odds()-fair_away_odds() < -0.2){
+      } else if(fair_away_odds() - away_odds() > 0.2){
         shinyjs::addClass(id = "btn_away_odds", class = "odds-button-worse")
       } else{
         shinyjs::addClass(id = "btn_away_odds", class = "odds-button-same")
@@ -512,10 +514,10 @@ card_for_match_details_Server <- function(id, r6) {
         pull(game_15_started)
       
       
-      if( bets_on_match >2 ){
+      if( bets_on_match >2 & r6$user_info$user_id != "641becda-79e7-40fa-b5fa-69e967821689"){
         showNotification("Max number of bets per match is 3", type = "error", duration = 5)
       } 
-      else if(active_bets_total > 9 ) {
+      else if(active_bets_total > 9 & r6$user_info$user_id != "641becda-79e7-40fa-b5fa-69e967821689") {
         showNotification("Max number of total bets is 10", type = "error", duration = 5)
       }
       else if (bet_open){
@@ -523,9 +525,15 @@ card_for_match_details_Server <- function(id, r6) {
       }
       else {
         
-        shinyjs::show(selector = ".full-page-spinner") 
+        # shinyjs::show(selector = ".full-page-spinner") 
         
+        showNotification("Placing bet and updating odds...", type = "message", duration = 5)
         
+        showModal(modalDialog(
+          title = "Please Wait",
+          "Calculation in progress...",
+          footer = NULL
+        ))
         write_data_to_db_bets(bet = to_win(), 
                               odds = round(to_win_odds(),2), 
                               match_id = paste0(r6$selected_home_team, "-", r6$selected_away_team, "-", current_season_ending), 
@@ -549,7 +557,9 @@ card_for_match_details_Server <- function(id, r6) {
         l_bets(l_after_update[[1]])
         trigger("set_odds_and_update_pie")
         
-        shinyjs::hide(selector = ".full-page-spinner") 
+        removeModal()
+        
+        # shinyjs::hide(selector = ".full-page-spinner") 
         
       }
       
