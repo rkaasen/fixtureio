@@ -354,22 +354,22 @@ server <- function(input, output, session) {
     nav_select("navbar", "HOME")
   })
   
-  observeEvent(input$full_screen_closed, {
-    trigger("full_screen_card_closed")
-  })
-  
-  observeEvent(input$div_clicked_home_team, {
-    trigger("open_analytics_card_home")
-  })
-  observeEvent(input$div_clicked_away_team, {
-    trigger("open_analytics_card_away")
-  })
-  observeEvent(input$div_clicked_result_col, ignoreInit = T, {
-    trigger("open_analytics_card")
-  })
-  observeEvent(input$div_clicked_bet_btn_in_est_page, ignoreInit = T,  {
-    trigger("open_analytics_card_with_bet")
-  })
+  # observeEvent(input$full_screen_closed, {
+  #   trigger("full_screen_card_closed")
+  # })
+  # 
+  # observeEvent(input$div_clicked_home_team, {
+  #   trigger("open_analytics_card_home")
+  # })
+  # observeEvent(input$div_clicked_away_team, {
+  #   trigger("open_analytics_card_away")
+  # })
+  # observeEvent(input$div_clicked_result_col, ignoreInit = T, {
+  #   trigger("open_analytics_card")
+  # })
+  # observeEvent(input$div_clicked_bet_btn_in_est_page, ignoreInit = T,  {
+  #   trigger("open_analytics_card_with_bet")
+  # })
   
   
   

@@ -18,6 +18,8 @@ def upload_df_to_postgres(df, table_name):
     db_password = os.getenv("DB_PASSWORD")
     db_port = os.getenv("DB_PORT", 5432)
 
+    print(db_host)
+
     # Create the SQLAlchemy engine
     engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
     df.to_sql(table_name, engine, schema="public", if_exists="replace", index=False)
@@ -49,3 +51,35 @@ def get_data_from_db(table_name_to_query):
         # Dispose of the engine connection
         engine.dispose()
     return df
+
+
+def append_df_to_postgres(df, table_name):
+    """
+    Append a pandas DataFrame to an existing PostgreSQL table in the 'public' schema.
+    Creates the table automatically if it doesn't exist.
+    """
+
+    db_host = os.getenv("DB_HOST")
+    db_name = os.getenv("DB_NAME")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_port = os.getenv("DB_PORT", 5432)
+
+    # sanity check
+    if not all([db_host, db_name, db_user, db_password]):
+        raise ValueError("Missing one or more required DB environment variables.")
+
+    # Create the SQLAlchemy engine
+    engine = create_engine(
+        f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    )
+
+    # Append instead of replace
+    df.to_sql(
+        table_name,
+        engine,
+        schema="public",
+        if_exists="append",
+        index=False,
+        method="multi"   # uses batch inserts, much faster
+    )

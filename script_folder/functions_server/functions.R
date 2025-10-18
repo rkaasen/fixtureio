@@ -253,7 +253,8 @@ f_team_3_letter <- function(league){
       "Tottenham", "TOT", "Spurs",
       "Watford", "WAT", "Watford",
       "West Ham", "WHU", "West Ham",
-      "Wolves", "WLV", "Wolves"
+      "Wolves", "WLV", "Wolves",
+      "Sunderland", "SUN", "Sunderland"
     )
   }
   

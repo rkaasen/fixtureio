@@ -2,6 +2,7 @@
 from sqlalchemy import create_engine, inspect
 import os
 from dotenv import load_dotenv
+import psycopg2
 
 # Load database credentials from environment variables
 load_dotenv()
@@ -51,13 +52,15 @@ from sqlalchemy import create_engine
 # table_name_to_query = "premier_league_data_current_lambda"
 # table_name_to_query = "premier_league_data_historical"
 # table_name_to_query = "premier_league_fixtures_current_lambda"
-table_name_to_query = "users"
+# table_name_to_query = "users"
 # table_name_to_query = "premier_league_fixtures_historical_enriched"
 
 # table_name_to_query = "match_estimated"
 # table_name_to_query = "bets"
 # table_name_to_query = "feedback"
 # table_name_to_query = "early_access_signups"
+
+table_name_to_query = "team_name_translate"
 
 
 # Set up environment variables or replace these with your database details

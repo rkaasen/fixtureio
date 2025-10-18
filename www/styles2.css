@@ -681,8 +681,8 @@ border-radius: 0px;
 .clickable-border {
   position: relative; /* To handle the border animation properly */
   cursor: pointer; /* Makes it clear that the element is clickable */
-  border: 1px solid transparent; /* Default border */
-  animation: pulse-border 2s infinite; /* Apply the animation */
+ /* border: 1px solid transparent; /* Default border */
+  /* animation: pulse-border 2s infinite; /* Apply the animation */
   border-radius: 8px; /* Optional: round the corners */
 }
 
