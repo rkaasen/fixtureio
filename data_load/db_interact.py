@@ -59,6 +59,7 @@ table_name_to_query = "users"
 # table_name_to_query = "feedback"
 # table_name_to_query = "early_access_signups"
 
+
 # Set up environment variables or replace these with your database details
 db_host = os.getenv("DB_HOST", "your_db_host")
 db_name = os.getenv("DB_NAME", "your_db_name")
@@ -177,7 +178,7 @@ if 1==2:
     try:
         with conn.cursor() as cursor:
             # Delete rows where username is 'test'
-            cursor.execute("DELETE FROM users WHERE username = 'FinalTest'")
+            cursor.execute("DELETE FROM users WHERE username = 'Rob2abby '")
             print("Rows deleted.")
             conn.commit()
     except Exception as e:

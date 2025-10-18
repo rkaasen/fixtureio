@@ -1,4 +1,5 @@
 
+library(uuid)
 
 notification_bar_UI <- function() {
   div(
@@ -478,15 +479,18 @@ f_calc_season_ending <- function(date){
   month <- now_utc %>% month()
   day <- now_utc %>% day()
   
-  if(month < 7){
-    return(year)
-  } else if(month > 7 ){
-    return(year + 1)
-  } else if(day>15) {
-    return(year + 1)
-  } else{
-    return(year)
-  }
+  # if(month < 7){
+  #   return(year)
+  # } else if(month > 7 ){
+  #   return(year + 1)
+  # } else if(day>15) {
+  #   return(year + 1)
+  # } else{
+  #   return(year)
+  # }
+  
+  return(2025)
+  
   
   
 }
@@ -564,15 +568,38 @@ write_data_to_db_users <- function(username, password_hash, email = "dummy", rol
   # Ensure connection closes at the end of the function, even if an error occurs
   on.exit(dbDisconnect(con), add = TRUE)
   
+  # # SQL query for parameterized insertion
+  # sql <- "
+  #   INSERT INTO users (username, password_hash, email, role)
+  #   VALUES ($1, $2, $3, $4)
+  # "
+  
+  
   # SQL query for parameterized insertion
   sql <- "
-    INSERT INTO users (username, password_hash, email, role)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO users (created_at, is_active, bets_available, bets_saved, bets_week_starting, \"TimeStamp_Bets_Updated\", role, username, password_hash, last_login, user_id, email)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
   "
+  params_create = list(
+    Sys.time(), # created at
+    TRUE, # is_active
+    10, # bets_available
+    0, # bets_saved
+    10, # bets_week_starting
+    Sys.time(), # TimeStamp_Bets_Updated
+    role , # role
+    username, # username
+    password_hash, # password_hash
+    NA, # last_login
+    uuid::UUIDgenerate(),  # UUID, user_id
+    email # email
+  )
+  
+  
   
   # Execute the query with parameters
   tryCatch({
-    dbExecute(con, sql, params = list(username, password_hash, email, role))
+    dbExecute(con, sql, params = params_create)
     print("New user created successfully!")
   }, error = function(e) {
     print(paste("Error creating user:", e$message))
@@ -1283,17 +1310,25 @@ f_prepare_schedule_view <- function(df_schedule) {
 
 
 
+if(F){
+  data <- r6$data$filtered
+  team <- r6$selected_home_team
+  date <- r6$data$match_date
+}
+
 f_form_plot <- function(data, team, date){
-  
-  
-  data <- data
   
   team_list = f_team_list(data) %>% as_tibble() %>% rename(Team = value)
   
+  data = data %>% mutate(Date=as.Date(Date, format = "%d/%m/%Y"))
+
+  data_date_f <- data %>% filter(as.Date(Date)<as.Date(date))
+  
+  
   df_results <- rbind(
-    team_list %>% left_join(data, by = c("Team" = "HomeTeam")) %>% rename(Opponent = AwayTeam) %>% 
+    team_list %>% left_join(data_date_f, by = c("Team" = "HomeTeam")) %>% rename(Opponent = AwayTeam) %>% 
       f_team_cols_rename(Home_Metrics = T) %>% mutate(Home = T),
-    team_list %>% left_join(data, by = c("Team" = "AwayTeam")) %>% mutate(Home = F) %>% rename(Opponent = HomeTeam) %>% 
+    team_list %>% left_join(data_date_f, by = c("Team" = "AwayTeam")) %>% mutate(Home = F) %>% rename(Opponent = HomeTeam) %>% 
       f_team_cols_rename(Home_Metrics = F)%>% mutate(Home = F)
   ) %>% 
     group_by(Team) %>% arrange(Date %>% desc) %>% 

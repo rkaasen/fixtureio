@@ -110,7 +110,7 @@ ui <- function(request) {
       nav_panel(
         title = icon("home"),
         value = "HOME",
-        notification_bar_UI(),
+        # notification_bar_UI(),
         home_page_UI("home_page") # Include module content
         
         
@@ -137,7 +137,7 @@ ui <- function(request) {
             tabPanel(
               "Matchup Select",
               reactable_extras_dependency(),
-              notification_bar_UI(),
+              # notification_bar_UI(),
               team_select_UI("ui_on_selection_tab"),
               
             ),
@@ -145,7 +145,7 @@ ui <- function(request) {
             # TAB 2:
             tabPanel(
               "Estimation",
-              notification_bar_UI(),
+              # notification_bar_UI(),
               estimation_page_info_UI("top_of_estimation_tab"),
             ),
           )

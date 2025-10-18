@@ -45,24 +45,25 @@ team_select_UI <- function(id) {
           mainPanel(
             fluidRow(
               div(style = "height: 6px;"),
-              column(9,
+              column(11, #was 9
                      align = "center",
                      reactableOutput( NS(id,"schedule_table"))
               ),
               
-              column(3, style = "background-color: #dee2e6; max-height: 100px;", class = "rounded-column",
-                     id = NS(id,"bet_counter_row"),
-                     h5("Number of bets used:"), #br(),
-                     h6(textOutput(NS(id,"n_bets_used"))), #br(),
-                     # br(),
-                     # h6("Number of bets remaining:"), br(),
-                     # h5(textOutput(NS(id,"n_bets_left"))),
-                     # div(style = "height: 75px;"),
-                     
-                     div(style = "height: 80px;"),
-                     
-                     h5("Bets placed on open games:"),
-                     plotOutput(NS(id,"n_bets_on_teams"), width = "100%", height = "650px")
+              column(1, # was 3
+                     # style = "background-color: #dee2e6; max-height: 100px;", class = "rounded-column",
+                     # id = NS(id,"bet_counter_row"),
+                     # h5("Number of bets used:"), #br(),
+                     # h6(textOutput(NS(id,"n_bets_used"))), #br(),
+                     # # br(),
+                     # # h6("Number of bets remaining:"), br(),
+                     # # h5(textOutput(NS(id,"n_bets_left"))),
+                     # # div(style = "height: 75px;"),
+                     # 
+                     # div(style = "height: 80px;"),
+                     # 
+                     # h5("Bets placed on open games:"),
+                     # plotOutput(NS(id,"n_bets_on_teams"), width = "100%", height = "650px")
                      
                      
                      
@@ -154,9 +155,12 @@ team_select_Server <- function(id, r6) {
         
         formatted_dates_list <- lapply(df_use$date_use, f_format_date_with_suffix) 
         
-        df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
-          mutate(Date = formatted_dates) %>% 
-          select(-formatted_dates) 
+        # df_use <- cbind(df_use, tibble(formatted_dates = unlist(formatted_dates_list))) %>% 
+        #   mutate(Date = formatted_dates) %>% 
+        #   select(-formatted_dates) 
+        
+        df_use <- df_use %>%
+          mutate(Date = unlist(lapply(date_use, f_format_date_with_suffix)))
         
         
         columns_list = list(
@@ -175,9 +179,9 @@ team_select_Server <- function(id, r6) {
         )
         
         
-        df_odds_open <- f_match_open_for_betting() %>% 
-          mutate(Bets = ifelse(bet_open, "Open", "Not Open")) %>% 
-          select(match_id, Bets)
+        # df_odds_open <- f_match_open_for_betting() %>% 
+        #   mutate(Bets = ifelse(bet_open, "Open", "Not Open")) %>% 
+        #   select(match_id, Bets)
         
         
         df_use <- df_use %>%
@@ -185,33 +189,34 @@ team_select_Server <- function(id, r6) {
           mutate(
             season_ending = f_calc_season_ending(utc_date),
             match_id = paste0(HomeTeam, "-", AwayTeam , "-", season_ending),
-          ) %>% 
-          left_join(df_odds_open) %>% 
-          mutate(
-            col_def = case_when(
-              Bets == "Open" ~ "#4CAF50",
-              Bets == "Not Open" ~ "#e22020",
-              T ~ "#4CAF50"
-            )
-          )
+          ) 
+        # %>% 
+        #   left_join(df_odds_open) %>% 
+        #   mutate(
+        #     col_def = case_when(
+        #       Bets == "Open" ~ "#4CAF50",
+        #       Bets == "Not Open" ~ "#e22020",
+        #       T ~ "#4CAF50"
+        #     )
+        #   )
         
-        columns_list$col_def <-  colDef(show = F)
-        columns_list$Bets <- colDef( minWidth = 110 , style = list(fontSize = "12px") , vAlign = "center", align = 'center',
-                                     cell = pill_buttons( data = df_use,
-                                                          color_ref  = "col_def",
-                                                          text_color = "white"  # White text color for contrast
-                                     ))
+        # columns_list$col_def <-  colDef(show = F)
+        # columns_list$Bets <- colDef( minWidth = 110 , style = list(fontSize = "12px") , vAlign = "center", align = 'center',
+        #                              cell = pill_buttons( data = df_use,
+        #                                                   color_ref  = "col_def",
+        #                                                   text_color = "white"  # White text color for contrast
+        #                              ))
         
-        if(r6$user_info$logged_in){
-          df_use <- df_use %>%
-            
-            left_join(
-              r6$user_info$bets  %>% group_by(match_id) %>%
-                summarise(`Your Bets` = n()) %>%
-                ungroup()
-            ) 
-          columns_list$`Your Bets` <-  colDef(name = "Your bets", minWidth = 100, align = "center", style = list(fontSize = "16px"))
-        }
+        # if(r6$user_info$logged_in){
+        #   df_use <- df_use %>%
+        #     
+        #     left_join(
+        #       r6$user_info$bets  %>% group_by(match_id) %>%
+        #         summarise(`Your Bets` = n()) %>%
+        #         ungroup()
+        #     ) 
+        #   columns_list$`Your Bets` <-  colDef(name = "Your bets", minWidth = 100, align = "center", style = list(fontSize = "16px"))
+        # }
         
         df_use <- df_use %>%
           select(-match_id, -season_ending)
